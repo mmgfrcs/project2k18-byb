@@ -8,7 +8,7 @@ public class Showcase : DepartmentBase {
     protected override void Start()
     {
         base.Start();
-        GameManager.RegisterDepartment(GameManager.Departments.Showcase, this);
+        GameManager.RegisterDepartment(Departments.Showcase, this);
     }
 
     // Update is called once per frame

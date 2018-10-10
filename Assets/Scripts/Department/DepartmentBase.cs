@@ -5,6 +5,7 @@ using UnityEngine;
 public class DepartmentBase : MonoBehaviour {
 
     public Transform[] interactablePosition;
+    public Transform lookDirection;
 
     // Use this for initialization
     protected virtual void Start () {

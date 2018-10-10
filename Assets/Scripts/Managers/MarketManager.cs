@@ -6,12 +6,12 @@ public class MarketManager : MonoBehaviour {
 
     public float[] baseDemands = new float[] { 6, 2, 1 };
     public float[] basePrices = new float[] { 8, 16, 24 };
-    Dictionary<ResourceManager.GameType, string> gameNames = new Dictionary<ResourceManager.GameType, string>()
+    Dictionary<GameType, string> gameNames = new Dictionary<GameType, string>()
     {
-        {ResourceManager.GameType.None, "Edwin's" },
-        {ResourceManager.GameType.GameA, "Rius'" },
-        {ResourceManager.GameType.GameB, "Derrick's" },
-        {ResourceManager.GameType.GameC, "Virya's" }
+        {GameType.None, "Edwin's" },
+        {GameType.GameA, "Rius'" },
+        {GameType.GameB, "Derrick's" },
+        {GameType.GameC, "Virya's" }
     };
     static MarketManager instance;
     
@@ -37,12 +37,12 @@ public class MarketManager : MonoBehaviour {
         return MathRand.WeightedPick(instance.baseDemands);
     }
 
-    public static float GetPrices(ResourceManager.GameType game)
+    public static float GetPrices(GameType game)
     {
         return instance.basePrices[(int)game];
     }
 
-    public static string GetGameNames(ResourceManager.GameType game)
+    public static string GetGameNames(GameType game)
     {
         return instance.gameNames[game];
     }

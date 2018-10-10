@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+public enum GameType
+{
+    None, GameA, GameB, GameC
+}
+
 public class ResourceManager : MonoBehaviour {
-
-    public enum GameType
-    {
-        None, GameA, GameB, GameC
-    }
-
+    
     int[] stocks = new int[4];
     static ResourceManager instance;
 
