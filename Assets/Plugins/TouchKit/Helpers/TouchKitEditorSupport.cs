@@ -9,7 +9,7 @@ using System.Collections;
 /// </summary>
 public partial class TouchKit
 {
-	private bool _isUnityRemoteActive = false; // hack to detect the Unity remote. Once you touch the screen once mouse input will be ignored
+	private bool _isUnityRemoteActive = false;
 	private Vector3 _simulatedMultitouchStartPosition;
 	private Vector3 _simulatedMousePosition;
 	private bool _isSimulatingMultitouch;

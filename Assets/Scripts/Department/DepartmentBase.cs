@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class DepartmentBase : MonoBehaviour {
 
+    public string departmentName;
     public Transform[] interactablePosition;
     public Transform lookDirection;
 

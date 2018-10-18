@@ -3,15 +3,20 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class MarketManager : MonoBehaviour {
+    [Header("Market Dynamics")]
+    public MarketKeypoint[] demandKeypoints;
+    public MarketKeypoint[] saleKeypoints, buyKeypoints;
 
-    public float[] baseDemands = new float[] { 6, 2, 1 };
-    public float[] basePrices = new float[] { 8, 16, 24 };
+    List<AnimationCurve> demands, salePrices, buyPrices;
+
+    float[] pricesMod = new float[] { 1, 1, 1, 1, 1 };
     Dictionary<GameType, string> gameNames = new Dictionary<GameType, string>()
     {
-        {GameType.None, "Edwin's" },
-        {GameType.GameA, "Rius'" },
-        {GameType.GameB, "Derrick's" },
-        {GameType.GameC, "Virya's" }
+        {GameType.GameA, "Edwin's" },
+        {GameType.GameB, "Rius'" },
+        {GameType.GameC, "Derrick's" },
+        {GameType.GameD, "Virya's" },
+        {GameType.GameE, "Asyraf's" },
     };
     static MarketManager instance;
     
@@ -20,36 +25,188 @@ public class MarketManager : MonoBehaviour {
     {
         if (instance == null) instance = this;
         else Destroy(this);
-    }
-    
-    // Update is called once per frame
-    void Update () {
 
-    }
+        demands = new List<AnimationCurve>();
+        //Each Game has its own curve, so loop that too
+        for (int i = 0; i < gameNames.Count; i++)
+        {
+            AnimationCurve curve = new AnimationCurve();
+            foreach (var key in demandKeypoints)
+            {
+                curve.AddKey(new Keyframe(key.day, key.dynamics[i]));
+            }
+            demands.Add(CurveModifier.SetCurveLinear(curve));
+        }
+        
+        salePrices = new List<AnimationCurve>();
+        for (int i = 0; i < gameNames.Count; i++)
+        {
+            AnimationCurve curve = new AnimationCurve();
+            foreach (var key in saleKeypoints)
+            {
+                curve.AddKey(new Keyframe(key.day, key.dynamics[i]));
+            }
+            salePrices.Add(CurveModifier.SetCurveLinear(curve));
+        }
 
-	void MarketUpdate()
-	{
-
+        buyPrices = new List<AnimationCurve>();
+        for (int i = 0; i < gameNames.Count; i++)
+        {
+            AnimationCurve curve = new AnimationCurve();
+            foreach (var key in buyKeypoints)
+            {
+                curve.AddKey(new Keyframe(key.day, key.dynamics[i]));
+            }
+            buyPrices.Add(CurveModifier.SetCurveLinear(curve));
+        }
     }
 
     public static int GetDemands()
     {
-        return MathRand.WeightedPick(instance.baseDemands);
+        List<float> demandList = new List<float>();
+        for(int i = 0; i < instance.gameNames.Count; i++) demandList.Add(instance.demands[i].Evaluate(GameManager.Days));
+        return MathRand.WeightedPick(demandList);
+        
+        //return MathRand.WeightedPick(instance.demandArr);
     }
 
-    public static float GetPrices(GameType game)
+    public static float GetSalePrice(GameType game)
     {
-        return instance.basePrices[(int)game];
+        return GetSalePrice((int)game);
+    }
+
+    public static float GetSalePrice(int game)
+    {
+        return GetBaseSalePrice(game) * instance.pricesMod[game];
+        //return instance.salePricesArr[game];
+    }
+
+    public static void SetSalePriceMod(GameType game, float mod)
+    {
+        SetSalePriceMod((int)game, mod);
+    }
+
+    public static void SetSalePriceMod(int game, float mod)
+    {
+        instance.pricesMod[game] = Mathf.Clamp(mod, 0f, 2f);
+    }
+
+    public static float GetSalePriceMod(GameType game)
+    {
+        return GetSalePriceMod((int)game);
+    }
+
+    public static float GetSalePriceMod(int game)
+    {
+        return instance.pricesMod[game];
+    }
+
+    public static float GetBaseSalePrice(GameType game)
+    {
+        return GetBaseSalePrice((int)game);
+    }
+
+    public static float GetBaseSalePrice(int game)
+    {
+        return instance.salePrices[game].Evaluate(GameManager.Days);
+        //return instance.salePricesArr[game];
+    }
+
+    public static float GetBuyPrice(GameType game)
+    {
+        return GetBuyPrice((int)game);
+    }
+
+    public static float GetBuyPrice(int game)
+    {
+        return instance.buyPrices[game].Evaluate(GameManager.Days);
+        //return instance.buyPricesArr[game];
+    }
+
+    public static bool IsGameAvailable(GameType game)
+    {
+        return IsGameAvailable((int)game);
+    }
+
+    public static bool IsGameAvailable(int game)
+    {
+        return game < instance.gameNames.Count && instance.demands[game].Evaluate(GameManager.Days) != 0;
+
+        //if (game > 2) return instance.demandArr.Length <= 4 && instance.demandArr[game] != 0;
+        //else return instance.demandArr[game] != 0;
     }
 
     public static string GetGameNames(GameType game)
     {
         return instance.gameNames[game];
     }
+
+    public static string GetGameNames(int game)
+    {
+        return instance.gameNames[(GameType)game];
+    }
+}
+
+public static class CurveModifier
+{
+    public static AnimationCurve SetCurveLinear(AnimationCurve curve)
+    {
+        for (int i = 0; i < curve.keys.Length; ++i)
+        {
+            float intangent = 0;
+            float outtangent = 0;
+            bool intangent_set = false;
+            bool outtangent_set = false;
+            Vector2 point1;
+            Vector2 point2;
+            Vector2 deltapoint;
+            Keyframe key = curve[i];
+
+            if (i == 0)
+            {
+                intangent = 0; intangent_set = true;
+            }
+
+            if (i == curve.keys.Length - 1)
+            {
+                outtangent = 0; outtangent_set = true;
+            }
+
+            if (!intangent_set)
+            {
+                point1.x = curve.keys[i - 1].time;
+                point1.y = curve.keys[i - 1].value;
+                point2.x = curve.keys[i].time;
+                point2.y = curve.keys[i].value;
+
+                deltapoint = point2 - point1;
+
+                intangent = deltapoint.y / deltapoint.x;
+            }
+            if (!outtangent_set)
+            {
+                point1.x = curve.keys[i].time;
+                point1.y = curve.keys[i].value;
+                point2.x = curve.keys[i + 1].time;
+                point2.y = curve.keys[i + 1].value;
+
+                deltapoint = point2 - point1;
+
+                outtangent = deltapoint.y / deltapoint.x;
+            }
+
+            key.inTangent = intangent;
+            key.outTangent = outtangent;
+            curve.MoveKey(i, key);
+        }
+
+        return curve;
+    }
 }
 
 [System.Serializable]
-public struct MarketData
+public struct MarketKeypoint
 {
-    
+    public int day;
+    public float[] dynamics;
 }

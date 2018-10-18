@@ -18,6 +18,8 @@ public class Customer : MonoBehaviour {
 
     public float Happiness { get; private set; }
     public GameType GameDemand { get; private set; }
+
+    internal string custName;
     internal float CurrentProgressTime { get { return t; } }
     internal float MaxProgressTime
     {
@@ -158,7 +160,7 @@ public class Customer : MonoBehaviour {
         isInActivity = false;
         SetObstruction(false);
         //Check for availability
-        if (ResourceManager.GetStock(GameDemand) <= 0)
+        if (Logistics.GetStock(GameDemand) <= 0)
         {
             CommitTransaction(false);
             StartCoroutine(LeaveBusiness());
