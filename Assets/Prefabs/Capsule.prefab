@@ -24,7 +24,6 @@ GameObject:
   - component: {fileID: 195896815063909128}
   - component: {fileID: 114219681882688112}
   - component: {fileID: 136511709958980500}
-  - component: {fileID: 208106174066849986}
   m_Layer: 0
   m_Name: Capsule
   m_TagString: Untagged
@@ -246,6 +245,7 @@ MonoBehaviour:
   lookAngleBuffer: 0.25
   lookTime: 4
   complainTime: 20
+  wanderTime: 10
   outlineMaterial: {fileID: 2100000, guid: 18d89dc922e430148bd17ace0cd806b5, type: 2}
 --- !u!114 &114908228245894354
 MonoBehaviour:
@@ -337,21 +337,6 @@ NavMeshAgent:
   m_BaseOffset: 1
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
---- !u!208 &208106174066849986
-NavMeshObstacle:
-  m_ObjectHideFlags: 1
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 100100000}
-  m_GameObject: {fileID: 1236922695574236}
-  m_Enabled: 0
-  serializedVersion: 3
-  m_Shape: 0
-  m_Extents: {x: 0.6, y: 5, z: 0.6}
-  m_MoveThreshold: 0.1
-  m_Carve: 1
-  m_CarveOnlyStationary: 1
-  m_Center: {x: 0, y: 0, z: 0}
-  m_TimeToStationary: 0.5
 --- !u!222 &222812286791951678
 CanvasRenderer:
   m_ObjectHideFlags: 1

@@ -33,7 +33,7 @@ public class GameManager : MonoBehaviour {
 
     [Header("UI")]
     public Text moneyText;
-    public Text stockText;
+    public Text timeText, stockText;
     public RectTransform infoPanel;
     public InfoPanel infoPanelContents;
 
@@ -112,8 +112,8 @@ public class GameManager : MonoBehaviour {
             custCount++;
         }
 
-        moneyText.text = string.Format("${0:N1}\n\n{1:N0}:{2:00}", Cash, DaytimeManager.TimeHour, DaytimeManager.TimeMinute);
-        
+        moneyText.text = string.Format("${0:N1}", Cash);
+        timeText.text = string.Format("{0:N0}:{1:00}", DaytimeManager.TimeHour, DaytimeManager.TimeMinute);
         stockText.text = string.Format("{6}/{7}\n{0:N0} {1}\n{2:N0} {3}\n{4:N0} {5}", 
             Logistics.GetStock(GameType.GameA), MarketManager.GetGameNames(GameType.GameA), 
             Logistics.GetStock(GameType.GameB), MarketManager.GetGameNames(GameType.GameB), 

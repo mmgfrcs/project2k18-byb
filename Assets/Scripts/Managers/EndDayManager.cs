@@ -35,12 +35,16 @@ public class EndDayManager : MonoBehaviour {
 
     [Header("UI - Forecast")]
     public GameObject forecastSection;
-    static EndDayManager instance;
+    public ForecastStruct[] forecastRows;
+    public Text forecastTotalCost;
 
+
+    static EndDayManager instance;
     int mode = 0;
 
     //Lists
     float[] gameRevenues = new float[5];
+    
     int[] gameSaleCount = new int[5];
     int[] addedStocks = new int[5];
 
@@ -137,6 +141,30 @@ public class EndDayManager : MonoBehaviour {
             }
         }
     }
+
+    void PopulateForecast()
+    {
+        float total = 0;
+        for (int i = 0; i < pricesRows.Length; i++)
+        {
+            if (MarketManager.IsGameAvailable(i))
+            {
+                forecastRows[i].gameName.transform.parent.gameObject.SetActive(true);
+                var data = MarketManager.GetAdDataForGame(i);
+                forecastRows[i].gameName.text = MarketManager.GetGameNames((GameType)i);
+                forecastRows[i].adType.text = data.adName;
+                forecastRows[i].adPrice.text = string.Format("${0:N0}", data.adPrice);
+                total += data.adPrice;
+                
+            }
+            else
+            {
+                forecastRows[i].gameName.transform.parent.gameObject.SetActive(false);
+            }
+        }
+
+        forecastTotalCost.text = string.Format("${0:N0}", total);
+    }
     //Finance Report
     public void ChangePage(int page)
     {
@@ -148,12 +176,14 @@ public class EndDayManager : MonoBehaviour {
          * 3 Restock
          * 4 Forecast 
          * 5 Prices
+         * 6 Loan
          */
 
         //Hide all sections
         financeSection.SetActive(false);
         restockSection.SetActive(false);
         pricesSection.SetActive(false);
+        forecastSection.SetActive(false);
         //TODO do the same for Overtime and Forecast
         switch (page)
         {
@@ -175,6 +205,12 @@ public class EndDayManager : MonoBehaviour {
                     UpdateAllRestockUI();
                     break;
                 }
+            case 4:
+                {
+                    forecastSection.SetActive(true);
+                    //UpdateAllRestockUI();
+                    break;
+                }
             case 5:
                 {
                     pricesSection.SetActive(true);
@@ -182,7 +218,7 @@ public class EndDayManager : MonoBehaviour {
                     break;
                 }
             case 2:
-            case 4:
+            case 6:
             default:
                 {
                     break;
@@ -344,6 +380,7 @@ public class EndDayManager : MonoBehaviour {
         instance.categoryButtons[0].isOn = true;
         instance.ChangePage(0);
 
+        //instance.PopulateForecast();
         instance.PopulateInitialRestock(); //Restock
         instance.moneyText.text = string.Format("${0:N0}", GameManager.Cash);
     }
@@ -392,4 +429,11 @@ public struct PricesStruct
 {
     public Text gameName, priceText;
     public Slider priceSlider;
+}
+
+[System.Serializable]
+public struct ForecastStruct
+{
+    public Text gameName, adType, adPrice, forecast;
+
 }

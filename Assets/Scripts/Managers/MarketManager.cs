@@ -6,10 +6,13 @@ public class MarketManager : MonoBehaviour {
     [Header("Market Dynamics")]
     public MarketKeypoint[] demandKeypoints;
     public MarketKeypoint[] saleKeypoints, buyKeypoints;
+    public string[] adNames = new string[] { "None", "Radio", "Flyers", "TV", "Balloon" };
+    public float[] adPrices = new float[] { 0, 25, 50, 100, 200 }, demandMod = new float[] { 1, 1, 1, 1, 1 }, permanentMod = new float[5];
 
     List<AnimationCurve> demands, salePrices, buyPrices;
 
     float[] pricesMod = new float[] { 1, 1, 1, 1, 1 };
+    int[] adLevel = new int[5];
     Dictionary<GameType, string> gameNames = new Dictionary<GameType, string>()
     {
         {GameType.GameA, "Edwin's" },
@@ -61,10 +64,33 @@ public class MarketManager : MonoBehaviour {
         }
     }
 
+    public static void SetDemands(int gameId, float demand)
+    {
+        instance.demandMod[gameId] = demand;
+    }
+
+    public static float GetAdPrice(int adId)
+    {
+        return instance.adPrices[adId];
+    }
+
+    public static string GetAdName(int adId)
+    {
+        return instance.adNames[adId];
+    }
+
+    public static AdData GetAdDataForGame(int gameId)
+    {
+        return new AdData() {
+            adLevel = instance.adLevel[gameId],
+            adName = GetAdName(instance.adLevel[gameId]),
+            adPrice = instance.adPrices[instance.adLevel[gameId]] };
+    }
+
     public static int GetDemands()
     {
         List<float> demandList = new List<float>();
-        for(int i = 0; i < instance.gameNames.Count; i++) demandList.Add(instance.demands[i].Evaluate(GameManager.Days));
+        for(int i = 0; i < instance.gameNames.Count; i++) demandList.Add(instance.demands[i].Evaluate(GameManager.Days) + instance.demandMod[i]);
         return MathRand.WeightedPick(demandList);
         
         //return MathRand.WeightedPick(instance.demandArr);
@@ -209,4 +235,11 @@ public struct MarketKeypoint
 {
     public int day;
     public float[] dynamics;
+}
+
+public struct AdData
+{
+    public string adName;
+    public float adPrice;
+    public int adLevel;
 }
