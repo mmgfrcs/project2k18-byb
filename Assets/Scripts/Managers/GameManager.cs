@@ -68,7 +68,6 @@ public class GameManager : MonoBehaviour {
         
         if (instance == null) instance = this;
         else Destroy(this);
-
         Cash = startingMoney;
         infoPanelAnim = infoPanel.GetComponent<Animator>();
 
@@ -98,7 +97,7 @@ public class GameManager : MonoBehaviour {
 
         if(canSpawnCustomer) t += Time.deltaTime;
         if (t >= customerSpawnTime && canSpawnCustomer)
-        {
+        { 
             t = 0;
             Transform start = MathRand.Pick(startPos);
             int choice = MathRand.WeightedPick(new float[] { recurringCust.Count, 1 });

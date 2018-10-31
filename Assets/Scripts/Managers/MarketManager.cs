@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
 public class MarketManager : MonoBehaviour {
     [Header("Market Dynamics")]
@@ -9,6 +10,10 @@ public class MarketManager : MonoBehaviour {
     public string[] adNames = new string[] { "None", "Radio", "Flyers", "TV", "Balloon" };
     public float[] adPrices = new float[] { 0, 25, 50, 100, 200 }, demandMod = new float[] { 1, 1, 1, 1, 1 }, permanentMod = new float[5];
 
+    [Header("Loans")]
+    public LoanData[] loans = new LoanData[3];
+    
+    LoanData currLoan = null;
     List<AnimationCurve> demands, salePrices, buyPrices;
 
     float[] pricesMod = new float[] { 1, 1, 1, 1, 1 };
@@ -29,6 +34,7 @@ public class MarketManager : MonoBehaviour {
         if (instance == null) instance = this;
         else Destroy(this);
 
+        
         demands = new List<AnimationCurve>();
         //Each Game has its own curve, so loop that too
         for (int i = 0; i < gameNames.Count; i++)
@@ -64,6 +70,22 @@ public class MarketManager : MonoBehaviour {
         }
     }
 
+    public static LoanData GetLoanData(int id)
+    {
+        return instance.loans[id];
+    }
+
+    public static void TakeLoan(int id)
+    {
+        instance.currLoan = GetLoanData(id);
+    }
+
+    public static void PayLoan(bool sweep, float amount = 0)
+    {
+        if (sweep) instance.currLoan = null;
+        else instance.currLoan.amount -= amount;
+    }
+
     public static void SetDemands(int gameId, float demand)
     {
         instance.demandMod[gameId] = demand;
@@ -90,7 +112,7 @@ public class MarketManager : MonoBehaviour {
     public static int GetDemands()
     {
         List<float> demandList = new List<float>();
-        for(int i = 0; i < instance.gameNames.Count; i++) demandList.Add(instance.demands[i].Evaluate(GameManager.Days) + instance.demandMod[i]);
+        for(int i = 0; i < instance.gameNames.Count; i++) demandList.Add(instance.demands[i].Evaluate(GameManager.Days));
         return MathRand.WeightedPick(demandList);
         
         //return MathRand.WeightedPick(instance.demandArr);
@@ -156,7 +178,10 @@ public class MarketManager : MonoBehaviour {
 
     public static bool IsGameAvailable(int game)
     {
-        return game < instance.gameNames.Count && instance.demands[game].Evaluate(GameManager.Days) != 0;
+        return game < instance.
+            gameNames.
+            Count && 
+            instance.demands[game].Evaluate(GameManager.Days) != 0;
 
         //if (game > 2) return instance.demandArr.Length <= 4 && instance.demandArr[game] != 0;
         //else return instance.demandArr[game] != 0;
@@ -242,4 +267,11 @@ public struct AdData
     public string adName;
     public float adPrice;
     public int adLevel;
+}
+[System.Serializable]
+public class LoanData
+{
+    public string loanName;
+    public float amount, interest;
+    public int term;
 }
