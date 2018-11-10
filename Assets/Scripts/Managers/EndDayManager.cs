@@ -48,11 +48,14 @@ public class EndDayManager : MonoBehaviour {
     static EndDayManager instance;
     int mode = 0;
     int toloan = 0;
+    
+
+    List<System.Tuple<string, string>> expenseString;
 
     //Lists
     float[] gameRevenues = new float[5];
-    List<System.Tuple<ExpenseType, float>> expenses = new List<System.Tuple<ExpenseType, float>>() { System.Tuple.Create(ExpenseType.Maintenance, 100f) };
-    
+    List<ExpensesData> expenses = new List<ExpensesData>();
+
     int[] gameSaleCount = new int[5];
     int[] addedStocks = new int[5];
 
@@ -62,7 +65,6 @@ public class EndDayManager : MonoBehaviour {
         else Destroy(this);
         forecastSection.SetActive(false);
         endDayPanel.SetActive(false);
-        
 	}
 
     void PopulateRevenue()
@@ -89,39 +91,77 @@ public class EndDayManager : MonoBehaviour {
         }
     }
 
+    void InitializeExpense()
+    {
+        if (expenseString == null || expenseString.Count == 0)
+        {
+            financeReportRows[0].label.text = "Total Expenses";
+            financeReportRows[0].value.text = string.Format("${0:N0}", 0);
+
+            for (int i = 1; i < financeReportRows.Length; i++)
+            {
+                financeReportRows[i].label.text = "";
+                financeReportRows[i].value.text = "";
+            }
+        }
+        else
+        {
+            for (int i = 0; i < financeReportRows.Length; i++)
+            {
+                var content = expenseString[i];
+                financeReportRows[i].label.text = content.Item1;
+                financeReportRows[i].value.text = content.Item2;
+            }
+        }
+    }
+
     void PopulateExpense()
     {
+        expenseString = new List<System.Tuple<string, string>>();
         float total = 0;
-        foreach (var rev in expenses) total += rev.Item2;
+        foreach (var rev in expenses) total += rev.amount;
+        expenseString.Add(System.Tuple.Create("Total Expenses", string.Format("${0:N0}", total)));
         for (int i = 0; i < financeReportRows.Length; i++)
         {
-            if (i == 0)
-            {
-                financeReportRows[i].label.text = "Total Expenses";
-                financeReportRows[i].value.text = string.Format("${0:N0}", total);
-            }
+            if (i == 0) financeReportRows[i].value.text = string.Format("${0:N0}", total);
             else
             {
                 if (i <= expenses.Count)
                 {
-                    financeReportRows[i].label.text = string.Format("- {0}", expenses[i - 1].Item1.ToString());
-                    financeReportRows[i].value.text = string.Format("${0:N0}", expenses[i - 1].Item2);
+                    expenseString.Add(
+                        System.Tuple.Create(string.Format("- {0}", expenses[i - 1].type.ToString()),
+                        string.Format("${0:N0}", expenses[i - 1].amount)
+                        ));
+
                 }
                 else
                 {
+                    expenseString.Add(System.Tuple.Create("", ""));
                     financeReportRows[i].label.text = "";
                     financeReportRows[i].value.text = "";
                 }
             }
         }
+        InitializeExpense();
+        
     }
 
     void PayExpenses()
     {
         for(int i = 0; i < expenses.Count; i++)
         {
-            GameManager.Cash -= expenses[i].Item2;
+            GameManager.Cash -= expenses[i].amount;
         }
+
+        LoanData data = MarketManager.GetLoanData(toloan);
+        if (data.taken)
+        {
+            MarketManager.PayLoanDaily();
+            data = MarketManager.GetLoanData(toloan);
+            UpdateExpense(ExpenseType.Loan, Departments.Start, data.amount / data.term);
+        }
+
+        PopulateExpense();
     }
 
     void PopulateInitialRestock()
@@ -187,15 +227,41 @@ public class EndDayManager : MonoBehaviour {
 
     void PopulateLoans()
     {
+        int tCount = 0;
         for (int i = 0; i < loanRows.Length; i++)
         {
             var data = MarketManager.GetLoanData(i);
-            loanRows[i].loanName.text = data.loanName;
-            loanRows[i].interest.text = string.Format("{0:N0}%", data.interest);
-            loanRows[i].amountValue.text = string.Format("${0:N0}", data.amount);
-            loanRows[i].durationValue.text = string.Format("{0} days", data.term);
-            loanRows[i].monthlyCost.text = string.Format("${0:N0}", data.amount * (1 + data.interest / 100) / data.term);
+            if (!data.taken)
+            {
+                loanRows[i].loanName.text = data.loanName;
+                loanRows[i].interest.text = string.Format("{0:N0}%", data.interest);
+                loanRows[i].amountLbl.text = "Amount";
+                loanRows[i].amountValue.text = string.Format("${0:N0}", data.amount);
+                loanRows[i].durationLbl.text = "Term Duration";
+                loanRows[i].monthlyCost.text = string.Format("${0:N0}", data.amount * (1 + data.interest / 100) / data.term);
+            }
+            else
+            {
+                tCount++;
+                loanRows[i].loanName.text = data.loanName;
+                loanRows[i].interest.text = string.Format("{0:N0}%", data.interest);
+                loanRows[i].amountLbl.text = "Remaining Amount";
+                loanRows[i].amountValue.text = string.Format("${0:N0}", data.amount);
+                loanRows[i].durationLbl.text = "Remaining Term";
+                loanRows[i].durationValue.text = string.Format("{0} days", data.term);
+                loanRows[i].monthlyCost.text = string.Format("${0:N0}", data.amount / data.term);
+                
+            }
         }
+
+        if(tCount == 0) foreach (var rows in loanRows) rows.amountLbl.transform.parent.GetComponent<Toggle>().interactable = true;
+        else foreach (var rows in loanRows) rows.amountLbl.transform.parent.GetComponent<Toggle>().interactable = false;
+    }
+
+    void OnSliderValueChange(float val, int id)
+    {
+        addedStocks[id] = Mathf.RoundToInt(val);
+        UpdateRestockUI(id);
     }
 
     //Finance Report
@@ -230,7 +296,7 @@ public class EndDayManager : MonoBehaviour {
             case 1:
                 {
                     financeSection.SetActive(true);
-                    PopulateExpense();
+                    InitializeExpense();
                     break;
                 }
             case 3:
@@ -287,32 +353,27 @@ public class EndDayManager : MonoBehaviour {
 
     public void OnSlider1ValueChange(float val)
     {
-        addedStocks[0] = Mathf.RoundToInt(val);
-        UpdateRestockUI(0);
+        OnSliderValueChange(val, 0);
     }
 
     public void OnSlider2ValueChange(float val)
     {
-        addedStocks[1] = Mathf.RoundToInt(val);
-        UpdateRestockUI(1);
+        OnSliderValueChange(val, 1);
     }
 
     public void OnSlider3ValueChange(float val)
     {
-        addedStocks[2] = Mathf.RoundToInt(val);
-        UpdateRestockUI(2);
+        OnSliderValueChange(val, 2);
     }
 
     public void OnSlider4ValueChange(float val)
     {
-        addedStocks[3] = Mathf.RoundToInt(val);
-        UpdateRestockUI(3);
+        OnSliderValueChange(val, 3);
     }
 
     public void OnSlider5ValueChange(float val)
     {
-        addedStocks[4] = Mathf.RoundToInt(val);
-        UpdateRestockUI(4);
+        OnSliderValueChange(val, 4);
     }
 
     public void OnPricesValueChange(int id)
@@ -355,9 +416,12 @@ public class EndDayManager : MonoBehaviour {
     {
         LoanData data = MarketManager.GetLoanData(toloan);
         GameManager.Cash += data.amount;
+        loanButton.interactable = false;
+        MarketManager.TakeLoan(toloan);
         //Add expense
         AddExpense(ExpenseType.Loan, Departments.Start, data.amount * (1 + data.interest / 100) / data.term);
         instance.moneyText.text = string.Format("${0:N0}", GameManager.Cash);
+        PopulateLoans();
     }
 
     public void OnNextDay()
@@ -430,11 +494,12 @@ public class EndDayManager : MonoBehaviour {
 
     public static void ShowEndDayPanel()
     {
+        instance.InitializeExpense();
         if (GameManager.Days < 1) instance.titleText.text = instance.gameStartTitle;
         else
         {
             instance.titleText.text = string.Format(instance.dayEndTitle, GameManager.Days);
-            instance.PayExpenses();
+            if (DaytimeManager.TimeHour > 15) instance.PayExpenses();
         }
         instance.addedStocks = new int[5];
         instance.endDayPanel.SetActive(true);
@@ -464,19 +529,76 @@ public class EndDayManager : MonoBehaviour {
         instance.gameSaleCount[(int)game]++;
     }
 
-    public static void AddExpense(ExpenseType type, Departments dept, float amt)
+    public static void AddExpense(ExpenseType type, Departments dept, float amt, int startday = 0, int duration = 0)
     {
-        var expense = instance.expenses.Find(x => x.Item1 == type);
-        if (expense != null)
+        if (type != ExpenseType.Salary)
         {
-            instance.expenses.Remove(expense);
-            instance.expenses.Add(System.Tuple.Create(type, amt + expense.Item2));
+            var expense = instance.expenses.Find(x => x.type == type);
+            if (expense != null)
+            {
+                var exp = instance.expenses[instance.expenses.IndexOf(expense)];
+                exp.amount += amt;
+                if (startday > 0) exp.startDay = startday;
+                if (duration > 0) exp.duration = duration;
+            }
+            else instance.expenses.Add(new ExpensesData()
+            {
+                type = type,
+                department = dept,
+                amount = amt,
+                startDay = startday,
+                duration = duration
+            });
         }
-        else instance.expenses.Add(System.Tuple.Create(type, amt));
+        else
+        {
+            var expense = instance.expenses.FindAll(x => x.type == type);
+            if (expense.Count != 0)
+            {
+                var exp = expense.Find(x => x.department == dept);
+                exp.amount += amt;
+                if (startday > 0) exp.startDay = startday;
+                if (duration > 0) exp.duration = duration;
+            }
+            else instance.expenses.Add(new ExpensesData()
+            {
+                type = type,
+                department = dept,
+                amount = amt,
+                startDay = startday,
+                duration = duration
+            });
+        }
     }
 	
-	// Update is called once per frame
-	void Update () {
+    public static void UpdateExpense(ExpenseType type, Departments dept, float amt, int startday = 0, int duration = 0)
+    {
+        if (type != ExpenseType.Salary)
+        {
+            var expense = instance.expenses.Find(x => x.type == type);
+            if (expense != null)
+            {
+                var exp = instance.expenses[instance.expenses.IndexOf(expense)];
+                exp.amount = amt;
+                if (startday > 0) exp.startDay = startday;
+                if (duration > 0) exp.duration = duration;
+            }
+        }
+        else
+        {
+            var expense = instance.expenses.FindAll(x => x.type == type);
+            if (expense.Count != 0)
+            {
+                var exp = expense.Find(x => x.department == dept);
+                exp.amount = amt;
+                if (startday > 0) exp.startDay = startday;
+                if (duration > 0) exp.duration = duration;
+            }
+        }
+    }
+
+    // Update is called once per frame
+    void Update () {
 
 	}
 }
@@ -512,4 +634,12 @@ public struct ForecastStruct
 public struct LoanStruct
 {
     public Text loanName, amountLbl, amountValue, interest, durationLbl, durationValue, monthlyCost;
+}
+
+public class ExpensesData
+{
+    public ExpenseType type;
+    public Departments department;
+    public int startDay, duration;
+    public float amount;
 }

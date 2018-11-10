@@ -1,10 +1,11 @@
-﻿using System.Collections;
+﻿
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.UI;
 
-public class Customer : MonoBehaviour {
+public class Customer : MonoBehaviour, ISelectable {
 
     public float startingHappiness = 60;
     public float baseVisitChance = 0.8f;
@@ -124,17 +125,14 @@ public class Customer : MonoBehaviour {
         }
 	}
 
-    internal void Select()
+    public void Select()
     {
-        MeshRenderer mr = GetComponent<MeshRenderer>();
-        if(origMat == null) origMat = mr.material;
-        mr.material = outlineMaterial;
+
     }
 
-    internal void Deselect()
+    public void Deselect()
     {
-        MeshRenderer mr = GetComponent<MeshRenderer>();
-        mr.material = origMat;
+
     }
 
     IEnumerator GoShopping()

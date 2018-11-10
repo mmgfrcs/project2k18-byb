@@ -11,6 +11,7 @@ public class DaytimeManager : MonoBehaviour {
 
     public static int TimeHour { get { return instance.time.Hour; } }
     public static float TimeMinute { get { return instance.time.Minute; } }
+    public static bool IsRunning { get { return !instance.paused; } }
 
     static DaytimeManager instance;
     bool paused = false;

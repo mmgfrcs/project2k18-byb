@@ -7,6 +7,9 @@ public class CustomerService : DepartmentBase {
     protected override void Start()
     {
         base.Start();
+        trustDrainRate = 0.01f;
+        departmentName = "Customer Service";
+        maxStaff = 1;
         GameManager.RegisterDepartment(Departments.CustService, this);
     }
 

@@ -1,26 +1,43 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class DepartmentBase : MonoBehaviour {
+public class DepartmentBase : MonoBehaviour, ISelectable {
 
-    public string departmentName;
+    
     public Transform[] interactablePosition;
     public Transform lookDirection;
+    
+    protected float trustDrainRate = 0.02f;
+    protected int currStaff, maxStaff;
+    protected float trust;
 
-    protected int currStaff;
+    internal string departmentName;
 
     internal int CurrentStaff { get { return currStaff; } }
-    internal bool IsFunctional { get { return currStaff > 0; } }
+    internal int MaximumStaff { get { return maxStaff; } }
+    internal float CurrentTrust { get { return trust; } }
+    internal bool IsFunctional { get { return currStaff > 0 && trust >= 10; } }
+
+    public virtual void Deselect()
+    {
+        
+    }
+
+    public virtual void Select()
+    {
+        
+    }
 
     // Use this for initialization
     protected virtual void Start () {
-		
+        trust = 60;
 	}
 
     // Update is called once per frame
     protected virtual void Update () {
-		
+        trust -= Time.deltaTime * trustDrainRate;
 	}
 
     internal virtual void AddStaff()

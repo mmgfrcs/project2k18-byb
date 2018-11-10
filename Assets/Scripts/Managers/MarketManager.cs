@@ -72,18 +72,29 @@ public class MarketManager : MonoBehaviour {
 
     public static LoanData GetLoanData(int id)
     {
+        if (instance.currLoan != null && instance.currLoan.loanName == instance.loans[id].loanName) return instance.currLoan;
         return instance.loans[id];
     }
 
     public static void TakeLoan(int id)
     {
         instance.currLoan = GetLoanData(id);
+        instance.currLoan.amount *= (1 + instance.currLoan.interest / 100);
+        instance.currLoan.taken = true;
+    }
+
+    public static void PayLoanDaily()
+    {
+        instance.currLoan.term--;
+        PayLoan(false, instance.currLoan.amount / instance.currLoan.term);
     }
 
     public static void PayLoan(bool sweep, float amount = 0)
     {
         if (sweep) instance.currLoan = null;
         else instance.currLoan.amount -= amount;
+
+        if (instance.currLoan.term == 0) instance.currLoan = null;
     }
 
     public static void SetDemands(int gameId, float demand)
@@ -274,4 +285,5 @@ public class LoanData
     public string loanName;
     public float amount, interest;
     public int term;
+    internal bool taken;
 }
