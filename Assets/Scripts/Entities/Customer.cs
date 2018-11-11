@@ -8,9 +8,8 @@ using UnityEngine.UI;
 public class Customer : MonoBehaviour, ISelectable {
 
     public float startingHappiness = 60;
-    public float baseVisitChance = 0.8f;
+    //public float baseVisitChance = 0.8f;
     public float[] actionWeight = new float[] { 8, 2, 0 };
-    public Text debugText;
 
     [Header("Internal")]
     public float lookAngleBuffer = 0.25f;
@@ -21,7 +20,7 @@ public class Customer : MonoBehaviour, ISelectable {
     public GameType GameDemand { get; private set; }
 
     internal string custName;
-    internal float CurrentProgressTime { get { return t; } }
+    internal float CurrentProgressTime { get; private set; }
     internal float MaxProgressTime
     {
         get
@@ -33,19 +32,16 @@ public class Customer : MonoBehaviour, ISelectable {
         }
     }
     internal string CurrentActionName { get { return actions[actionId]; } }
-    internal int CustomerID { get { return cId; } }
+    internal int CustomerID { get; private set; } = -1;
     
-
-    float prog = 0;
     bool finished = false, isInActivity = false;
     NavMeshAgent agent;
     NavMeshObstacle obs;
-    Material origMat;
-    int actionId = -1, cId = -1;
-    float t;
+    readonly Material origMat;
+    int actionId = -1;
     Vector3 startPos;
     float origSpd;
-    Dictionary<int, string> actions = new Dictionary<int, string>()
+    private readonly Dictionary<int, string> actions = new Dictionary<int, string>()
     {
         {-1, "Leaving" }, {0, "Shopping" }, {1, "Looking Around" }, {2, "Complaining" }
     };
@@ -61,7 +57,7 @@ public class Customer : MonoBehaviour, ISelectable {
 	// Use this for initialization
 	void Start () {
 
-        cId = GameManager.RequestID();
+        CustomerID = GameManager.RequestID();
         agent = GetComponent<NavMeshAgent>();
         obs = GetComponent<NavMeshObstacle>();
         origSpd = agent.speed;
@@ -100,28 +96,27 @@ public class Customer : MonoBehaviour, ISelectable {
         if (!finished && actionId == 0) Happiness -= Time.deltaTime / 6;
         string action = actionId > 0 ? "Wander" : actionId == 0 ? "Shop" : "Leaving";
         //var dest = new Vector3(agent.destination.x, transform.position.y, agent.destination.z);
-        debugText.text = string.Format("({3}) {0:N1}%\n{1} {2}", Happiness, action, actionId == 0 ? MarketManager.GetGameNames(GameDemand) : "", cId);
 
         if (actionId == 1)
         {
-            t += Time.deltaTime;
-            if (t >= wanderTime)
+            CurrentProgressTime += Time.deltaTime;
+            if (CurrentProgressTime >= wanderTime)
             {
                 StopAllCoroutines();
                 StartCoroutine(LeaveBusiness());
-                t = 0;
+                CurrentProgressTime = 0;
 
             }
         } else if(actionId == 0) {
-            if (isInActivity) t += Time.deltaTime;
-            else t = 0;
-            if (t > lookTime) t = lookTime;
+            if (isInActivity) CurrentProgressTime += Time.deltaTime;
+            else CurrentProgressTime = 0;
+            if (CurrentProgressTime > lookTime) CurrentProgressTime = lookTime;
             
         } else if (actionId == 2)
         {
-            if (isInActivity) t += Time.deltaTime;
-            else t = 0;
-            if (t > complainTime) t = complainTime;
+            if (isInActivity) CurrentProgressTime += Time.deltaTime;
+            else CurrentProgressTime = 0;
+            if (CurrentProgressTime > complainTime) CurrentProgressTime = complainTime;
         }
 	}
 
@@ -196,20 +191,20 @@ public class Customer : MonoBehaviour, ISelectable {
         actionId = 1;
         agent.speed *= 0.75f;
 
-        while (t < wanderTime)
+        while (CurrentProgressTime < wanderTime)
         {
             //Move to wander point
             agent.SetDestination(GameManager.GetWander().position);
             yield return new WaitUntil(() =>
             {
-                return CheckDistance(agent.destination) || t >= wanderTime;
+                return CheckDistance(agent.destination) || CurrentProgressTime >= wanderTime;
             });
 
             //Look at random direction
             Vector3 dir = new Vector3(transform.position.x + Random.Range(-10, 10), transform.position.y, transform.position.z + Random.Range(-10, 10));
             yield return new WaitUntil(() =>
             {
-                return RotateTowards(dir) < lookAngleBuffer || t >= wanderTime;
+                return RotateTowards(dir) < lookAngleBuffer || CurrentProgressTime >= wanderTime;
             });
             SetObstruction(true);
             //Wait arbitrarily

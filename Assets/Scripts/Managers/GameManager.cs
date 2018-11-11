@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 public enum Departments
 {
@@ -25,6 +26,7 @@ public class GameManager : MonoBehaviour {
     public Transform[] startPos;
     public Transform[] wanderPos;
     public GameObject[] customerObjects;
+    public StatusTabPanel[] statusTabDepts;
     public Transform cameraPivot;
 
     [Header("Settings"), Range(0.1f,3f)]
@@ -44,7 +46,10 @@ public class GameManager : MonoBehaviour {
 
     [Header("Panels")]
     public Canvas shopCanvas;
-    public Animator shopAnimator, statusAnimator;
+
+    [Header("Animators")]
+    public Animator shopAnimator;
+    public Animator statusAnimator, pausePanelAnim, gameFaderAnim;
 
     internal static float Cash { get; set; }
     internal static int Days { get; private set; }
@@ -56,7 +61,7 @@ public class GameManager : MonoBehaviour {
         }
     }
 
-    public static event System.Action OnLevelUp;
+    public static event System.Action OnLevelUp, OnNextDay;
 
     string[] custNames;
     static GameManager instance;
@@ -104,6 +109,8 @@ public class GameManager : MonoBehaviour {
         TouchKit.addGestureRecognizer(pr);
 
         DaytimeManager.OnDayEnd += DaytimeManager_OnDayEnd;
+
+        gameFaderAnim.Play("FadeOut");
     }
     
     // Update is called once per frame
@@ -135,8 +142,39 @@ public class GameManager : MonoBehaviour {
         moneyText.text = string.Format("${0:N1}", Cash);
         timeText.text = string.Format("{0:N0}:{1:00}", DaytimeManager.TimeHour, DaytimeManager.TimeMinute);
 
+        int i = 0;
+        foreach(var status in statusTabDepts)
+        {
+            DepartmentBase db = null;
+            while (db == null)
+            {
+                if (i < 2)
+                {
+                    i++;
+                    continue;
+                }
+                if (i <= 7)
+                {
+                    if(depts.ContainsKey((Departments)i)) db = depts[(Departments)i];
+                    i++;
+                }
+                else break;
+            }
+
+            if (db != null)
+            {
+                status.departmentName.text = db.departmentName;
+                status.trustSlider.maxValue = 100;
+                status.trustSlider.value = db.CurrentTrust;
+                status.employeeSlider.wholeNumbers = true;
+                status.employeeSlider.maxValue = db.MaximumStaff;
+                status.employeeSlider.value = db.CurrentStaff;
+            }
+            else status.gameObject.SetActive(false);
+        }
+
         //Input (touch)
-        if (DaytimeManager.IsRunning)
+        if (DaytimeManager.IsRunning && Time.timeScale != 0)
         {
             var touch = Input.touches;
             if (touch.Length == 1 && touch[0].deltaPosition.magnitude > 0.2f)
@@ -144,18 +182,18 @@ public class GameManager : MonoBehaviour {
                 Vector3 delta = new Vector3(touch[0].deltaPosition.x, 0, touch[0].deltaPosition.y);
                 cameraPivot.Translate(delta * -Time.deltaTime * 0.4f * panSensitivity);
             }
-            else if (Input.GetMouseButtonDown(0))
+            else if (Input.GetMouseButtonDown(0) && !EventSystem.current.IsPointerOverGameObject())
             {
                 Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
                 RaycastHit hit;
                 if (Physics.Raycast(ray, out hit))
                 {
-
+                   
                     ISelectable sel = hit.collider.GetComponent<ISelectable>();
 
                     if (sel != null && !(sel is Showcase))
                     {
-                        if(selected == null) selectStatusAnim.Play("Open");
+                        if (selected == null) selectStatusAnim.Play("Open");
                         DeselectAll();
 
                         selected = sel;
@@ -163,9 +201,10 @@ public class GameManager : MonoBehaviour {
                     }
                     else
                     {
-                        selectStatusAnim.Play("Close");
+                        if(selected != null) selectStatusAnim.Play("Close");
                         DeselectAll();
                     }
+                    
                 }
             }
         }
@@ -205,6 +244,18 @@ public class GameManager : MonoBehaviour {
             */
             //infoPanelContents.Bar1Image.sprite = Hearts
         }
+    }
+
+    public void PauseGame()
+    {
+        Time.timeScale = 0;
+        pausePanelAnim.Play("Open");
+    }
+
+    public void UnpauseGame()
+    {
+        Time.timeScale = 1;
+        pausePanelAnim.Play("Close");
     }
 
     private void DeselectAll()
@@ -257,12 +308,25 @@ public class GameManager : MonoBehaviour {
     IEnumerator ProcessDayEnd()
     {
         DaytimeManager.PauseDaytime();
-        yield return new WaitWhile(() => { return custCount > 0; });
-        shopCanvas.sortingOrder = -1;
-        shopAnimator.Play("Closed");
-        statusAnimator.Play("Closed");
-        EndDayManager.ShowEndDayPanel();
+        if (Days > 0)
+        {
+            yield return new WaitWhile(() => { return custCount > 0; });
+            shopCanvas.sortingOrder = -1;
+            shopAnimator.Play("Closed");
+            statusAnimator.Play("Closed");
 
+            gameFaderAnim.Play("FadeIn");
+            yield return new WaitForSeconds(1f);
+            EndDayManager.ShowEndDayPanel();
+            gameFaderAnim.Play("FadeOut");
+        }
+        else
+        {
+            shopCanvas.sortingOrder = -1;
+            shopAnimator.Play("Closed");
+            statusAnimator.Play("Closed");
+            EndDayManager.ShowEndDayPanel();
+        }
     }
 
     bool IsInfoPanelClosed()
@@ -291,18 +355,30 @@ public class GameManager : MonoBehaviour {
 
     }
 
-    public static void NextDay(bool isDay)
+    public static void NextDay(bool isDay, GameObject panel = null)
     {
         if (isDay)
         {
-            instance.canSpawnCustomer = true;
-            DaytimeManager.UnpauseDaytime();
+            instance.StartCoroutine(instance.StartDay(panel));
         }
         else
         {
             Days++;
             DaytimeManager.AdvanceTimeTo(8);
+            OnNextDay?.Invoke();
         }
+        
+    }
+
+    IEnumerator StartDay(GameObject panel)
+    {
+        gameFaderAnim.Play("FadeIn");
+        yield return new WaitForSeconds(1f);
+        panel.SetActive(false);
+        gameFaderAnim.Play("FadeOut");
+        yield return new WaitForSeconds(1f);
+        instance.canSpawnCustomer = true;
+        DaytimeManager.UnpauseDaytime();
         
     }
 
@@ -375,7 +451,11 @@ public class GameManager : MonoBehaviour {
 
     public static void CustomerLeave(GameObject custObj)
     {
-        instance.DeselectAll();
+        if (instance.selected == custObj.GetComponent<Customer>())
+        {
+            instance.selectStatusAnim.Play("Close");
+            instance.DeselectAll();
+        }
         instance.recurringCust.Add(custObj);
         custObj.SetActive(false);
         custObj.transform.position = new Vector3(-1000, -1000, -1000);

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -15,6 +14,7 @@ public class DepartmentBase : MonoBehaviour, ISelectable {
 
     internal string departmentName;
 
+    internal bool Overtime { get; set; }
     internal int CurrentStaff { get { return currStaff; } }
     internal int MaximumStaff { get { return maxStaff; } }
     internal float CurrentTrust { get { return trust; } }
@@ -33,7 +33,14 @@ public class DepartmentBase : MonoBehaviour, ISelectable {
     // Use this for initialization
     protected virtual void Start () {
         trust = 60;
+        currStaff = 1;
+        GameManager.OnNextDay += GameManager_OnNextDay;
 	}
+
+    protected virtual void GameManager_OnNextDay()
+    {
+
+    }
 
     // Update is called once per frame
     protected virtual void Update () {

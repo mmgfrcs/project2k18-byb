@@ -22,7 +22,9 @@ public class Logistics : DepartmentBase {
 	protected override void Start () {
         if (instance == null) instance = this;
         else Destroy(this);
-        trustDrainRate = 0.04f;
+        base.Start();
+
+        trustDrainRate = 0.1f;
         maxStaff = 3;
         departmentName = "Logistics";
         GameManager.RegisterDepartment(Departments.Logistics, this);

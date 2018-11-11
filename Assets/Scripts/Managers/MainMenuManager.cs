@@ -4,12 +4,11 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 public class MainMenuManager : MonoBehaviour {
-
-
-
+    
     public void OnPlay()
     {
-        SceneManager.LoadScene(1);
+        LoadingScreenManager.nextSceneName = "Game";
+        SceneManager.LoadScene("Loading");
     }
 
 	// Use this for initialization

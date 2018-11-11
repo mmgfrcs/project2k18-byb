@@ -16,9 +16,9 @@ public class EndDayManager : MonoBehaviour {
 
     [Header("UI - General")]
     public GameObject endDayPanel;
-    public Text titleText;
-    public Text moneyText;
+    public Text titleText, moneyText, nextDayButtonText;
     public Toggle[] categoryButtons;
+    public Animator faderAnimator;
 
     [Header("UI - Finance")]
     public GameObject financeSection;
@@ -428,15 +428,13 @@ public class EndDayManager : MonoBehaviour {
     {
         if (mode == 0)
         {
+            faderAnimator.Play("FadeIn");
             GameManager.NextDay(false);
-            endDayPanel.SetActive(false);
-            ShowStartDayPanel();
             mode = 1;
         }
         else
         {
-            GameManager.NextDay(true);
-            endDayPanel.SetActive(false);
+            GameManager.NextDay(true, endDayPanel);
             instance.gameRevenues = new float[5];
             instance.gameSaleCount = new int[5];
             mode = 0;
@@ -507,7 +505,7 @@ public class EndDayManager : MonoBehaviour {
         instance.categoryButtons[0].isOn = true;
         instance.ChangePage(0);
 
-        
+        instance.nextDayButtonText.text = "Next Day";
         //instance.PopulateForecast();
         instance.PopulateLoans();
         instance.PopulateInitialRestock(); //Restock
@@ -517,8 +515,10 @@ public class EndDayManager : MonoBehaviour {
     public static void ShowStartDayPanel()
     {
         ShowEndDayPanel();
+        instance.nextDayButtonText.text = "Start Day";
         instance.categoryButtons[3].interactable = false;
         instance.titleText.text = string.Format(instance.dayStartTitle, GameManager.Days);
+        instance.faderAnimator.Play("FadeOut");
         //TODO Set Game Sale Price
 
     }

@@ -6,6 +6,7 @@ public class Marketing : DepartmentBase {
 
 	// Use this for initialization
 	protected override void Start () {
+        base.Start();
         maxStaff = 3;
         departmentName = "Marketing";
         GameManager.RegisterDepartment(Departments.Marketing, this);
