@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Linq;
 
 public enum ExpenseType
 {
@@ -23,6 +24,9 @@ public class EndDayManager : MonoBehaviour {
     [Header("UI - Finance")]
     public GameObject financeSection;
     public FinanceReportStruct[] financeReportRows;
+    public FinanceReportStruct[] netRevenueRows;
+    public FinanceReportStruct[] expenseByDeptRows;
+    public GameObject financeDeptMissingObject;
 
     [Header("UI - Restock")]
     public GameObject restockSection;
@@ -36,8 +40,7 @@ public class EndDayManager : MonoBehaviour {
 
     [Header("UI - Forecast")]
     public GameObject forecastSection;
-    public ForecastStruct[] forecastRows;
-    public Text forecastTotalCost;
+    public ForecastEntry[] forecastRows;
 
     [Header("UI - Loans")]
     public GameObject loanSection;
@@ -45,12 +48,16 @@ public class EndDayManager : MonoBehaviour {
     public Text loanButtonText;
     public Button loanButton;
 
+    [Header("UI - Overtime")]
+    public GameObject overtimeSection;
+    public OvertimeEntry[] overtimeRows;
+
     static EndDayManager instance;
     int mode = 0;
     int toloan = 0;
     
-
     List<System.Tuple<string, string>> expenseString;
+    Dictionary<string, DepartmentBase> overtimeAssociation = new Dictionary<string, DepartmentBase>();
 
     //Lists
     float[] gameRevenues = new float[5];
@@ -66,30 +73,6 @@ public class EndDayManager : MonoBehaviour {
         forecastSection.SetActive(false);
         endDayPanel.SetActive(false);
 	}
-
-    void PopulateRevenue()
-    {
-        float total = 0;
-        foreach (var rev in gameRevenues) total += rev;
-        for (int i = 0; i < financeReportRows.Length; i++)
-        {
-            if (i == 0)
-            {
-                financeReportRows[i].label.text = "Total Revenues";
-                financeReportRows[i].value.text = string.Format("${0:N0}", total);
-            }
-            else if (MarketManager.IsGameAvailable((GameType)(i - 1)))
-            {
-                financeReportRows[i].label.text = string.Format("- {0}", MarketManager.GetGameNames((GameType)(i - 1)));
-                financeReportRows[i].value.text = string.Format("({1}) ${0:N0}", gameRevenues[i - 1], gameSaleCount[i - 1]);
-            }
-            else
-            {
-                financeReportRows[i].label.text = "";
-                financeReportRows[i].value.text = "";
-            }
-        }
-    }
 
     void InitializeExpense()
     {
@@ -112,6 +95,44 @@ public class EndDayManager : MonoBehaviour {
                 financeReportRows[i].label.text = content.Item1;
                 financeReportRows[i].value.text = content.Item2;
             }
+        }
+    }
+
+    void InitializeOvertime()
+    {
+        overtimeAssociation = new Dictionary<string, DepartmentBase>();
+        int dept = 2;
+        for(int i = 0; i < overtimeRows.Length; i++)
+        {
+            
+            DepartmentBase db = null;
+            while(db == null)
+            {
+                if (dept > 9) break;
+                if (GameManager.IsDepartmentExists((Departments)dept))
+                {
+                    GameObject deptGo = GameManager.GetDeptObject((Departments)dept);
+                    if (deptGo != null)
+                    {
+                        db = deptGo.GetComponent<DepartmentBase>();
+                        if (db.overtimeEffect == null) db = null;
+                    }
+                }
+                
+                dept++;
+            }
+            print("OVERTIME: dept = " + dept + ", Dept: " + db);
+            if(db != null)
+            {
+                overtimeAssociation.Add(db.departmentName, db);
+                overtimeRows[i].gameObject.SetActive(true);
+                overtimeRows[i].departmentName.text = db.departmentName;
+                overtimeRows[i].overtimeEffect.text = db.overtimeEffect;
+                overtimeRows[i].overtimeToggle.isOn = db.Overtime;
+            }
+            else overtimeRows[i].gameObject.SetActive(false);
+
+            db = null;
         }
     }
 
@@ -146,22 +167,28 @@ public class EndDayManager : MonoBehaviour {
         
     }
 
-    void PayExpenses()
+    void PopulateRevenue()
     {
-        for(int i = 0; i < expenses.Count; i++)
+        float total = 0;
+        foreach (var rev in gameRevenues) total += rev;
+        for (int i = 0; i < financeReportRows.Length; i++)
         {
-            GameManager.Cash -= expenses[i].amount;
+            if (i == 0)
+            {
+                financeReportRows[i].label.text = "Total Revenues";
+                financeReportRows[i].value.text = string.Format("${0:N0}", total);
+            }
+            else if (MarketManager.IsGameAvailable((GameType)(i - 1)))
+            {
+                financeReportRows[i].label.text = string.Format("- {0}", MarketManager.GetGameNames((GameType)(i - 1)));
+                financeReportRows[i].value.text = string.Format("({1}) ${0:N0}", gameRevenues[i - 1], gameSaleCount[i - 1]);
+            }
+            else
+            {
+                financeReportRows[i].label.text = "";
+                financeReportRows[i].value.text = "";
+            }
         }
-
-        LoanData data = MarketManager.GetLoanData(toloan);
-        if (data.taken)
-        {
-            MarketManager.PayLoanDaily();
-            data = MarketManager.GetLoanData(toloan);
-            UpdateExpense(ExpenseType.Loan, Departments.Start, data.amount / data.term);
-        }
-
-        PopulateExpense();
     }
 
     void PopulateInitialRestock()
@@ -203,26 +230,22 @@ public class EndDayManager : MonoBehaviour {
 
     void PopulateForecast()
     {
-        float total = 0;
         for (int i = 0; i < pricesRows.Length; i++)
         {
             if (MarketManager.IsGameAvailable(i))
             {
-                forecastRows[i].gameName.transform.parent.gameObject.SetActive(true);
-                var data = MarketManager.GetAdDataForGame(i);
-                forecastRows[i].gameName.text = MarketManager.GetGameNames((GameType)i);
-                forecastRows[i].adType.text = data.adName;
-                forecastRows[i].adPrice.text = string.Format("${0:N0}", data.adPrice);
-                total += data.adPrice;
+                forecastRows[i].gameObject.SetActive(true);
+                forecastRows[i].gameTitle.text = MarketManager.GetGameNames((GameType)i);
+                forecastRows[i].nextDayForecast.text = "Dummy " + i;
+                forecastRows[i].nextWeekForecast.text = "Dota 2 7." + i;
                 
             }
             else
             {
-                forecastRows[i].gameName.transform.parent.gameObject.SetActive(false);
+                forecastRows[i].gameObject.SetActive(false);
             }
         }
-
-        forecastTotalCost.text = string.Format("${0:N0}", total);
+        
     }
 
     void PopulateLoans()
@@ -237,7 +260,7 @@ public class EndDayManager : MonoBehaviour {
                 loanRows[i].interest.text = string.Format("{0:N0}%", data.interest);
                 loanRows[i].amountLbl.text = "Amount";
                 loanRows[i].amountValue.text = string.Format("${0:N0}", data.amount);
-                loanRows[i].durationLbl.text = "Term Duration";
+                loanRows[i].durationLbl.text = "Duration";
                 loanRows[i].monthlyCost.text = string.Format("${0:N0}", data.amount * (1 + data.interest / 100) / data.term);
             }
             else
@@ -245,9 +268,9 @@ public class EndDayManager : MonoBehaviour {
                 tCount++;
                 loanRows[i].loanName.text = data.loanName;
                 loanRows[i].interest.text = string.Format("{0:N0}%", data.interest);
-                loanRows[i].amountLbl.text = "Remaining Amount";
+                loanRows[i].amountLbl.text = "Rem. Amt.";
                 loanRows[i].amountValue.text = string.Format("${0:N0}", data.amount);
-                loanRows[i].durationLbl.text = "Remaining Term";
+                loanRows[i].durationLbl.text = "Rem. Term";
                 loanRows[i].durationValue.text = string.Format("{0} days", data.term);
                 loanRows[i].monthlyCost.text = string.Format("${0:N0}", data.amount / data.term);
                 
@@ -258,12 +281,28 @@ public class EndDayManager : MonoBehaviour {
         else foreach (var rows in loanRows) rows.amountLbl.transform.parent.GetComponent<Toggle>().interactable = false;
     }
 
-    void OnSliderValueChange(float val, int id)
+    void PayExpenses()
     {
-        addedStocks[id] = Mathf.RoundToInt(val);
-        UpdateRestockUI(id);
-    }
+        for(int i = 0; i < expenses.Count; i++)
+        {
+            if (GameManager.IsDepartmentFunctional(Departments.Finance))
+            {
+                Finance fin = GameManager.GetDeptScript(Departments.Finance) as Finance;
+                GameManager.Cash -= fin.ProcessExpense(expenses[i].amount, GameManager.GetTotalStaffs());
+            }
+        }
 
+        LoanData data = MarketManager.GetLoanData(toloan);
+        if (data.taken)
+        {
+            MarketManager.PayLoanDaily();
+            data = MarketManager.GetLoanData(toloan);
+            UpdateExpense(ExpenseType.Loan, Departments.Start, data.amount / data.term);
+        }
+
+        PopulateExpense();
+    }
+    
     //Finance Report
     public void ChangePage(int page)
     {
@@ -280,6 +319,7 @@ public class EndDayManager : MonoBehaviour {
         instance.moneyText.text = string.Format("${0:N0}", GameManager.Cash);
         //Hide all sections
         financeSection.SetActive(false);
+        overtimeSection.SetActive(false);
         restockSection.SetActive(false);
         pricesSection.SetActive(false);
         forecastSection.SetActive(false);
@@ -299,6 +339,11 @@ public class EndDayManager : MonoBehaviour {
                     InitializeExpense();
                     break;
                 }
+            case 2:
+                {
+                    overtimeSection.SetActive(true);
+                    break;
+                }
             case 3:
                 {
                     restockSection.SetActive(true);
@@ -308,6 +353,7 @@ public class EndDayManager : MonoBehaviour {
             case 4:
                 {
                     forecastSection.SetActive(true);
+                    PopulateForecast();
                     //UpdateAllRestockUI();
                     break;
                 }
@@ -322,16 +368,14 @@ public class EndDayManager : MonoBehaviour {
                     loanSection.SetActive(true);
                     break;
                 }
-            case 2:
-            
             default:
                 {
                     break;
                 }
         }
     }
-    
-    //Restocks
+
+    #region Restock Actions
     public void OnIncrease(int id)
     {
         if (restockRows[id].stockSlider.value != restockRows[id].stockSlider.maxValue)
@@ -349,6 +393,12 @@ public class EndDayManager : MonoBehaviour {
         restockRows[id].stockSlider.value = Mathf.Max(restockRows[id].stockSlider.value - 1, 0);
         UpdateRestockUI(id);
 
+    }
+
+    void OnSliderValueChange(float val, int id)
+    {
+        addedStocks[id] = Mathf.RoundToInt(val);
+        UpdateRestockUI(id);
     }
 
     public void OnSlider1ValueChange(float val)
@@ -375,7 +425,9 @@ public class EndDayManager : MonoBehaviour {
     {
         OnSliderValueChange(val, 4);
     }
+    #endregion
 
+    #region Prices Button Actions
     public void OnPricesValueChange(int id)
     {
         UpdatePricesUI(id);
@@ -400,7 +452,9 @@ public class EndDayManager : MonoBehaviour {
 
         PopulateInitialRestock();
     }
+    #endregion
 
+    #region Loans Button Actions
     public void OnLoanValueChange(bool val)
     {
         if (val) loanButton.interactable = true;
@@ -410,6 +464,13 @@ public class EndDayManager : MonoBehaviour {
     public void OnLoanValueChange(int id)
     {
         toloan = id;
+    }
+    #endregion
+
+    public void OnOvertimeToggle(int id)
+    {
+        DepartmentBase db = overtimeAssociation[overtimeRows[id].departmentName.text];
+        db.Overtime = overtimeRows[id].overtimeToggle.isOn;
     }
 
     public void OnLoanCommit()
@@ -502,6 +563,8 @@ public class EndDayManager : MonoBehaviour {
         instance.addedStocks = new int[5];
         instance.endDayPanel.SetActive(true);
         instance.categoryButtons[3].interactable = true;
+        if (GameManager.IsDepartmentFunctional(Departments.Forecaster)) instance.categoryButtons[4].interactable = true;
+        else instance.categoryButtons[4].interactable = false;
         instance.categoryButtons[0].isOn = true;
         instance.ChangePage(0);
 
@@ -509,6 +572,7 @@ public class EndDayManager : MonoBehaviour {
         //instance.PopulateForecast();
         instance.PopulateLoans();
         instance.PopulateInitialRestock(); //Restock
+        instance.InitializeOvertime();
         
     }
 

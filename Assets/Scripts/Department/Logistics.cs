@@ -25,8 +25,9 @@ public class Logistics : DepartmentBase {
         base.Start();
 
         trustDrainRate = 0.1f;
-        maxStaff = 3;
+        CurrentStaff = 2;
         departmentName = "Logistics";
+        overtimeEffect = "Increase obtained bought supplies";
         GameManager.RegisterDepartment(Departments.Logistics, this);
         Capacity = startingCapacity;
 

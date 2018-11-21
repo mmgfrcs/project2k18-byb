@@ -13,7 +13,7 @@ public class Customer : MonoBehaviour, ISelectable {
 
     [Header("Internal")]
     public float lookAngleBuffer = 0.25f;
-    public float lookTime = 4, complainTime = 20, wanderTime = 10;
+    public float lookTime = 4, wanderTime = 10;
     public Material outlineMaterial;
 
     public float Happiness { get; private set; }
@@ -25,20 +25,35 @@ public class Customer : MonoBehaviour, ISelectable {
     {
         get
         {
-            if (actionId == 0) return lookTime;
+            if (actionId == 0)
+            {
+                if (step == 0) return lookTime;
+                else
+                {
+                    Cashier cashier = GameManager.GetDeptScript(Departments.Cashier) as Cashier;
+                    return cashier.ServeSpeed;
+                }
+            }
             else if (actionId == 1) return wanderTime;
-            else if (actionId == 2) return complainTime;
+            else if (actionId == 2)
+            {
+                CustomerService customer = GameManager.GetDeptScript(Departments.CustService) as CustomerService;
+                return customer.ServeSpeed;
+            }
             else return 0;
         }
     }
     internal string CurrentActionName { get { return actions[actionId]; } }
+    internal int Visits { get; private set; }
+
+    internal float TotalSpendings { get; private set; }
     internal int CustomerID { get; private set; } = -1;
     
     bool finished = false, isInActivity = false;
     NavMeshAgent agent;
     NavMeshObstacle obs;
     readonly Material origMat;
-    int actionId = -1;
+    int actionId = -1, step = 0;
     Vector3 startPos;
     float origSpd;
     private readonly Dictionary<int, string> actions = new Dictionary<int, string>()
@@ -68,6 +83,7 @@ public class Customer : MonoBehaviour, ISelectable {
 
     public void ChooseAction()
     {
+        Visits++;
         agent.speed = origSpd;
         GetComponent<MeshRenderer>().material.color = Color.white;
         finished = false;
@@ -83,7 +99,7 @@ public class Customer : MonoBehaviour, ISelectable {
             StartCoroutine(GoWander());
             //Wander
         }
-        else if (MathRand.WeightedPick(actionWeight) == 2 && GameManager.IsDepartmentExists(Departments.CustService))
+        else if (MathRand.WeightedPick(actionWeight) == 2 && GameManager.IsDepartmentFunctional(Departments.CustService))
         {
             
             StartCoroutine(GoComplain()); //Complain
@@ -94,7 +110,6 @@ public class Customer : MonoBehaviour, ISelectable {
 	// Update is called once per frame
 	void Update () {
         if (!finished && actionId == 0) Happiness -= Time.deltaTime / 6;
-        string action = actionId > 0 ? "Wander" : actionId == 0 ? "Shop" : "Leaving";
         //var dest = new Vector3(agent.destination.x, transform.position.y, agent.destination.z);
 
         if (actionId == 1)
@@ -107,17 +122,17 @@ public class Customer : MonoBehaviour, ISelectable {
                 CurrentProgressTime = 0;
 
             }
-        } else if(actionId == 0) {
+        }
+        else if(actionId == 0) {
             if (isInActivity) CurrentProgressTime += Time.deltaTime;
             else CurrentProgressTime = 0;
-            if (CurrentProgressTime > lookTime) CurrentProgressTime = lookTime;
-            
-        } else if (actionId == 2)
+        }
+        else if (actionId == 2)
         {
             if (isInActivity) CurrentProgressTime += Time.deltaTime;
             else CurrentProgressTime = 0;
-            if (CurrentProgressTime > complainTime) CurrentProgressTime = complainTime;
         }
+        if (CurrentProgressTime > MaxProgressTime) CurrentProgressTime = MaxProgressTime;
 	}
 
     public void Select()
@@ -133,7 +148,7 @@ public class Customer : MonoBehaviour, ISelectable {
     IEnumerator GoShopping()
     {
         actionId = 0;
-
+        step = 0;
         //Move to interact point of the Showcase. TODO: Choose interact point
         agent.SetDestination(GameManager.GetInteractable(Departments.Showcase).position);
         yield return new WaitUntil(() => {
@@ -160,7 +175,9 @@ public class Customer : MonoBehaviour, ISelectable {
             yield break;
         }
 
+        step++;
         //Move character. TODO: Choose interact point
+        Cashier cashier = GameManager.GetDeptScript(Departments.Cashier) as Cashier;
         agent.SetDestination(GameManager.GetInteractable(Departments.Cashier).position);
         yield return new WaitUntil(() => {
             return CheckDistance(agent.destination);
@@ -174,12 +191,13 @@ public class Customer : MonoBehaviour, ISelectable {
         SetObstruction(true);
         isInActivity = true;
         //Wait to visualize look. Animate
-        yield return new WaitForSeconds(lookTime);
+        yield return new WaitForSeconds(cashier.ServeSpeed);
+        
+        //Do transaction, then wait as visualization
+        TotalSpendings += GameManager.CommitTransaction(this, GameDemand);
+        yield return new WaitForSeconds(1.5f);
 
         isInActivity = false;
-        //Do transaction, then wait as visualization
-        GameManager.CommitTransaction(this, GameDemand);
-        yield return new WaitForSeconds(1.5f);
 
         SetObstruction(false);
         //Move out from the shop.
@@ -228,10 +246,12 @@ public class Customer : MonoBehaviour, ISelectable {
             return RotateTowards(GameManager.GetDeptObject(Departments.CustService).transform.position) < lookAngleBuffer;
         });
 
+        CustomerService cust = GameManager.GetDeptScript(Departments.CustService) as CustomerService;
+
         SetObstruction(true);
         isInActivity = true;
         //Wait to visualize look. Animate
-        yield return new WaitForSeconds(complainTime);
+        yield return new WaitForSeconds(cust.ServeSpeed);
         isInActivity = false;
 
         CommitTransaction(true, 16);
