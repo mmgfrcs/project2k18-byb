@@ -25,7 +25,6 @@ public class Logistics : DepartmentBase {
         base.Start();
 
         trustDrainRate = 0.1f;
-        CurrentStaff = 2;
         departmentName = "Logistics";
         overtimeEffect = "Increase obtained bought supplies";
         GameManager.RegisterDepartment(Departments.Logistics, this);
@@ -41,7 +40,13 @@ public class Logistics : DepartmentBase {
             ExpendGame(3);
             ExpendGame(4);
         }
-	}
+        UpdateSalary();
+    }
+
+    internal void UpdateSalary()
+    {
+        UpdateSalary(Departments.Logistics);
+    }
 
     public static int GetStock(GameType game)
     {

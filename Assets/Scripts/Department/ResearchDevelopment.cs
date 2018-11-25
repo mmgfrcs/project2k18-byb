@@ -7,6 +7,12 @@ public class ResearchDevelopment : DepartmentBase {
     {
         base.Start();
         departmentName = "R&D";
+        UpdateSalary();
         GameManager.RegisterDepartment(Departments.Research, this);
+    }
+
+    internal void UpdateSalary()
+    {
+        UpdateSalary(Departments.Research);
     }
 }

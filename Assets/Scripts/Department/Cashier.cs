@@ -11,10 +11,14 @@ public class Cashier : DepartmentBase {
     {
         base.Start();
         departmentName = "Cashier";
+        UpdateSalary();
         GameManager.RegisterDepartment(Departments.Cashier, this);
-        
     }
 
+    internal void UpdateSalary()
+    {
+        UpdateSalary(Departments.Cashier);
+    }
     // Update is called once per frame
 
 }

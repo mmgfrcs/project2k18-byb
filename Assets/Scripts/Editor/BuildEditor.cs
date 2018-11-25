@@ -44,7 +44,7 @@ public class BuildEditor : EditorWindow, IPreprocessBuildWithReport {
         if (parsing.Length == 3)
         {
             int.TryParse(parsing[0], out ret[0]);
-            if (int.TryParse(parsing[1], out ret[1])) ret[1] = 1;
+            if (!int.TryParse(parsing[1], out ret[1])) ret[1] = 1;
             //22b - b means development version
             if (parsing[2].Contains("b"))
             {
@@ -80,7 +80,7 @@ public class BuildEditor : EditorWindow, IPreprocessBuildWithReport {
         PlayerSettings.bundleVersion = CollapseVersion(ver, developmentVersion);
         System.DateTime date = System.DateTime.Now;
         //27101036
-        PlayerSettings.Android.bundleVersionCode = int.Parse(string.Format("{0}{1}{2}", date.Day, date.Month, date.Hour, date.Minute));
+        PlayerSettings.Android.bundleVersionCode = int.Parse(string.Format("{0:00}{1:00}{2:00}{3:00}", date.Day, date.Month, date.Hour, date.Minute));
         Debug.Log("Building " + Application.productName + " version " + PlayerSettings.bundleVersion);
     }
 }

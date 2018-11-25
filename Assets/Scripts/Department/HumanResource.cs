@@ -8,6 +8,12 @@ public class HumanResource : DepartmentBase {
     {
         base.Start();
         departmentName = "HRD";
+        UpdateSalary();
         GameManager.RegisterDepartment(Departments.HRD, this);
+    }
+
+    internal void UpdateSalary()
+    {
+        UpdateSalary(Departments.HRD);
     }
 }

@@ -17,6 +17,12 @@ public class Forecaster : DepartmentBase {
         overtimeEffect = "Improves Next day Forecast's accuracy";
         ForecastMaxFactor = initialUncertainty / 100 + 1;
         ForecastMinFactor = 1 - initialUncertainty / 100;
+        UpdateSalary();
         GameManager.RegisterDepartment(Departments.Forecaster, this);
+    }
+
+    internal void UpdateSalary()
+    {
+        UpdateSalary(Departments.Forecaster);
     }
 }

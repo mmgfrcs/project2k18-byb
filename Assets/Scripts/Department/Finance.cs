@@ -12,6 +12,7 @@ public class Finance : DepartmentBase {
     {
         base.Start();
         departmentName = "Finance";
+        UpdateSalary();
         GameManager.RegisterDepartment(Departments.Finance, this);
     }
 
@@ -21,8 +22,18 @@ public class Finance : DepartmentBase {
         return expense * rat;
     }
 
+    internal float ProcessExpense(float expense)
+    {
+        return ProcessExpense(expense, GameManager.GetTotalStaffs());
+    }
+
     public void UpgradeLevel()
     {
         if (Level < 4) Level++;
+    }
+
+    internal void UpdateSalary()
+    {
+        UpdateSalary(Departments.Finance);
     }
 }

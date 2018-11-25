@@ -6,7 +6,7 @@ public class DepartmentBase : MonoBehaviour, ISelectable {
     
     public Transform[] interactablePosition;
     public Transform lookDirection;
-    public int maxStaff = 1;
+    public int maxStaff = 1, startingStaff = 1;
     public float salary;
     public float minimumStaffRatio = 0.2f;
     public float fullSpeedStaffRatio = 0.8f;
@@ -45,6 +45,7 @@ public class DepartmentBase : MonoBehaviour, ISelectable {
     // Use this for initialization
     protected virtual void Start () {
         GameManager.OnNextDay += GameManager_OnNextDay;
+        CurrentStaff = startingStaff;
         MaximumStaff = maxStaff;
 	}
 
@@ -68,5 +69,9 @@ public class DepartmentBase : MonoBehaviour, ISelectable {
         CurrentStaff = Mathf.Max(CurrentStaff - 1, 0);
     }
 
-    
+    protected virtual void UpdateSalary(Departments dept)
+    {
+        float mod = GameManager.IsDepartmentExists(Departments.Finance) ? (GameManager.GetDeptScript(Departments.Finance) as Finance).ProcessExpense(salary * CurrentStaff) : 0;
+        EndDayManager.AddExpense(ExpenseType.Salary, dept, salary * CurrentStaff, salary * CurrentStaff - mod);
+    }
 }

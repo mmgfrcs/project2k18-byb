@@ -9,13 +9,13 @@ public class Marketing : DepartmentBase {
         base.Start();
         departmentName = "Marketing";
         overtimeEffect = "Increase Ads Effect";
+        UpdateSalary();
         GameManager.RegisterDepartment(Departments.Marketing, this);
     }
 
-    // Update is called once per frame
-    protected override void Update()
+    internal void UpdateSalary()
     {
-
+        UpdateSalary(Departments.Marketing);
     }
-    
+
 }

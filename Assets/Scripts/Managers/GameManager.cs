@@ -12,12 +12,15 @@ public enum Departments
 
 public class GameManager : MonoBehaviour {
 
+    public bool mainMenuMode;
+
     [Header("Customer")]
     public string customerNameFile = "custnames";
 
     [Header("Mechanics")]
     public float startingMoney;
     public float customerSpawnTime = 6f;
+    public float baseVisitChance = 0.5f;
     public float maintenanceCost = 100f;
     public float newCustomerRatio = 1;
     public float[] baseXPPerLevel = { 1000 };
@@ -47,17 +50,17 @@ public class GameManager : MonoBehaviour {
     public DepartmentPanel departmentSelectContents;
 
     [Header("Panels")]
-    public Canvas shopCanvas;
     public Canvas stockCanvas;
 
     [Header("Animators")]
-    public Animator shopAnimator;
-    public Animator statusAnimator, stockAnimator, pausePanelAnim, gameFaderAnim;
+    public Animator statusAnimator;
+    public Animator stockAnimator, pausePanelAnim, gameFaderAnim;
 
     internal static float Cash { get; set; }
     internal static int Days { get; private set; }
     internal static int CompanyLevel { get; private set; }
     internal static float CurrentXP { get; private set; }
+    internal static bool isInDemoMode { get { return instance.mainMenuMode; } }
     internal static float NextXP { get {
             if (_xp.Length > CompanyLevel) return _xp[_xp.Length - 1] + _nxp * (CompanyLevel - _xp.Length);
             else return _xp[CompanyLevel];
@@ -81,7 +84,7 @@ public class GameManager : MonoBehaviour {
     float t = 0;
     int cid = 1, custCount = 0, nameCount = 0;
 
-    bool canSpawnCustomer = true;
+    bool canSpawnCustomer = true, isSpawning;
 
     private void Awake()
     {
@@ -90,174 +93,196 @@ public class GameManager : MonoBehaviour {
 
     // Use this for initialization
     void Start () {
-        if (instance == null) instance = this;
+        if (instance == null || instance.mainMenuMode) instance = this;
         else Destroy(this);
-        _xp = baseXPPerLevel;
-        _nxp = nextXPPerLevel;
-        CompanyLevel = 1;
 
-        EndDayManager.AddExpense(ExpenseType.Maintenance, Departments.Start, maintenanceCost);
-
-        Cash = startingMoney;
-
-        rt.gestureRecognizedEvent += (i) => {
-            if(canSpawnCustomer) cameraPivot.Rotate(Vector3.up, -rt.deltaRotation * rotateSensitivity, Space.World);
-        };
-
-        pr.gestureRecognizedEvent += (i) =>
+        if (!mainMenuMode)
         {
-            if (canSpawnCustomer) Camera.main.transform.Translate(Vector3.forward * 2 * pr.deltaScale * pinchSensitivity);
-        };
-        TouchKit.addGestureRecognizer(rt);
-        TouchKit.addGestureRecognizer(pr);
 
-        DaytimeManager.OnDayEnd += DaytimeManager_OnDayEnd;
+            _xp = baseXPPerLevel;
+            _nxp = nextXPPerLevel;
+            CompanyLevel = 1;
 
-        gameFaderAnim.Play("FadeOut");
+            EndDayManager.AddExpense(ExpenseType.Maintenance, Departments.Start, maintenanceCost);
+
+            Cash = startingMoney;
+
+            rt.gestureRecognizedEvent += (i) =>
+            {
+                if (canSpawnCustomer) cameraPivot.Rotate(Vector3.up, -rt.deltaRotation * rotateSensitivity, Space.World);
+            };
+
+            pr.gestureRecognizedEvent += (i) =>
+            {
+                if (canSpawnCustomer) Camera.main.transform.Translate(Vector3.forward * 2 * pr.deltaScale * pinchSensitivity);
+            };
+            TouchKit.addGestureRecognizer(rt);
+            TouchKit.addGestureRecognizer(pr);
+
+            DaytimeManager.OnDayEnd += DaytimeManager_OnDayEnd;
+
+            gameFaderAnim.Play("FadeOut");
+        }
     }
     
     // Update is called once per frame
     void Update () {
-        if(!depts.ContainsKey(Departments.Logistics) || !depts.ContainsKey(Departments.Cashier))
+        if(!depts.ContainsKey(Departments.Logistics) || !depts.ContainsKey(Departments.Cashier) || !depts.ContainsKey(Departments.Showcase))
         {
             Debug.LogError("Cannot load game: Department requirements not met");
             enabled = false;
         }
 
-        levelText.text = CompanyLevel.ToString("n0");
-
-        if(canSpawnCustomer) t += Time.deltaTime;
+        if(canSpawnCustomer && !isSpawning) t += Time.deltaTime;
         if (t >= customerSpawnTime && canSpawnCustomer)
-        { 
+        {
             t = 0;
-            Transform start = MathRand.Pick(startPos);
-            int choice = MathRand.WeightedPick(new float[] { recurringCust.Count, newCustomerRatio });
-            if (choice == 1)
-            {
-                Customer c = Instantiate(MathRand.Pick(customerObjects), start.position, start.rotation).GetComponent<Customer>();
-                c.custName = AssignCustomerName();
-            }
-            else CustomerReturn(MathRand.Pick(recurringCust)); //else we return it
-            
-            custCount++;
+            isSpawning = true;
+            StartCoroutine(SpawnTime());
         }
-
-        moneyText.text = string.Format("({1}) ${0:N1}", Cash, CurrentXP);
-        timeText.text = string.Format("{0:N0}:{1:00}", DaytimeManager.TimeHour, DaytimeManager.TimeMinute);
-
-        int i = 2;
-        foreach(var status in statusTabDepts)
+        if (!mainMenuMode)
         {
-            DepartmentBase db = null;
-            while (db == null)
+            levelText.text = CompanyLevel.ToString("n0");
+            moneyText.text = string.Format("({1}) ${0:N1}", Cash, CurrentXP);
+            timeText.text = string.Format("{0:N0}:{1:00}", DaytimeManager.TimeHour, DaytimeManager.TimeMinute);
+
+            int i = 2;
+            foreach (var status in statusTabDepts)
             {
-                if (i <= 10)
+                DepartmentBase db = null;
+                while (db == null)
                 {
-                    if(depts.ContainsKey((Departments)i)) db = depts[(Departments)i];
-                    i++;
+                    if (i <= 10)
+                    {
+                        if (depts.ContainsKey((Departments)i)) db = depts[(Departments)i];
+                        i++;
+                    }
+                    else break;
                 }
-                else break;
-            }
 
-            if (db != null)
-            {
-                status.departmentName.text = db.departmentName;
-                status.trustSlider.maxValue = 100;
-                status.trustSlider.value = db.CurrentTrust;
-                status.employeeSlider.wholeNumbers = true;
-                status.employeeSlider.maxValue = db.MaximumStaff;
-                status.employeeSlider.value = db.CurrentStaff;
-            }
-            else status.gameObject.SetActive(false);
-        }
-
-        stockTab.totalStocks.text = string.Format("{0:N0}/{1:N0}", Logistics.GetTotalStocks(), Logistics.Capacity);
-        stockTab.totalStocksBar.maxValue = Logistics.Capacity;
-        stockTab.totalStocksBar.value = Logistics.GetTotalStocks();
-        stockTab.totalStocksFill.color = Color.HSVToRGB((1 - (float)Logistics.GetTotalStocks() / Logistics.Capacity) / 3.6f, 1, 1);
-        for(i = 0; i < 5; i++)
-        {
-            if (MarketManager.IsGameAvailable((GameType)i))
-            {
-                stockTab.gameTitles[i].text = MarketManager.GetGameNames((GameType)i);
-                stockTab.gameStocks[i].text = Logistics.GetStock(i).ToString("n0");
-                if (i > 0) stockTab.separators[i - 1].SetActive(true);
-            }
-            else
-            {
-                stockTab.gameTitles[i].text = "";
-                stockTab.gameStocks[i].text = "";
-                if (i > 0) stockTab.separators[i - 1].SetActive(false);
-            }
-        }
-
-        //Input (touch)
-        if (DaytimeManager.IsRunning && Time.timeScale != 0)
-        {
-            var touch = Input.touches;
-            if (touch.Length == 1 && touch[0].deltaPosition.magnitude > 0.2f)
-            {
-                Vector3 delta = new Vector3(touch[0].deltaPosition.x, 0, touch[0].deltaPosition.y);
-                cameraPivot.Translate(delta * -Time.deltaTime * 0.4f * panSensitivity);
-            }
-            else if (Input.GetMouseButtonDown(0) && !EventSystem.current.IsPointerOverGameObject())
-            {
-                Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-                RaycastHit hit;
-                if (Physics.Raycast(ray, out hit))
+                if (db != null)
                 {
-                   
-                    ISelectable sel = hit.collider.GetComponent<ISelectable>();
+                    status.departmentName.text = db.departmentName;
+                    status.trustSlider.maxValue = 100;
+                    status.trustSlider.value = db.CurrentTrust;
+                    status.employeeSlider.wholeNumbers = true;
+                    status.employeeSlider.maxValue = db.MaximumStaff;
+                    status.employeeSlider.value = db.CurrentStaff;
+                }
+                else status.gameObject.SetActive(false);
+            }
 
-                    if (sel != null && !(sel is Showcase))
-                    {
-                        if (selected == null) selectStatusAnim.Play("Open");
-                        DeselectAll();
-
-                        selected = sel;
-                        selected.Select();
-
-                        if (selected is DepartmentBase) departmentSelectContents.overtimeToggle.isOn = (selected as DepartmentBase).Overtime;
-                    }
-                    else
-                    {
-                        if(selected != null) selectStatusAnim.Play("Close");
-                        DeselectAll();
-                    }
-                    
+            stockTab.totalStocks.text = string.Format("{0:N0}/{1:N0}", Logistics.GetTotalStocks(), Logistics.Capacity);
+            stockTab.totalStocksBar.maxValue = Logistics.Capacity;
+            stockTab.totalStocksBar.value = Logistics.GetTotalStocks();
+            stockTab.totalStocksFill.color = Color.HSVToRGB((1 - (float)Logistics.GetTotalStocks() / Logistics.Capacity) / 3.6f, 1, 1);
+            for (i = 0; i < 5; i++)
+            {
+                if (MarketManager.IsGameAvailable((GameType)i))
+                {
+                    stockTab.gameTitles[i].text = MarketManager.GetGameNames((GameType)i);
+                    stockTab.gameStocks[i].text = Logistics.GetStock(i).ToString("n0");
+                    if (i > 0) stockTab.separators[i - 1].SetActive(true);
+                }
+                else
+                {
+                    stockTab.gameTitles[i].text = "";
+                    stockTab.gameStocks[i].text = "";
+                    if (i > 0) stockTab.separators[i - 1].SetActive(false);
                 }
             }
+
+            //Input (touch)
+            if (DaytimeManager.IsRunning && Time.timeScale != 0)
+            {
+                var touch = Input.touches;
+                if (touch.Length == 1 && touch[0].deltaPosition.magnitude > 0.2f)
+                {
+                    Vector3 delta = new Vector3(touch[0].deltaPosition.x, 0, touch[0].deltaPosition.y);
+                    cameraPivot.Translate(delta * -Time.deltaTime * 0.4f * panSensitivity);
+                }
+                else if (Input.GetMouseButtonDown(0) && !EventSystem.current.IsPointerOverGameObject())
+                {
+                    Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+                    RaycastHit hit;
+                    if (Physics.Raycast(ray, out hit))
+                    {
+
+                        ISelectable sel = hit.collider.GetComponent<ISelectable>();
+
+                        if (sel != null && !(sel is Showcase))
+                        {
+                            if (selected == null) selectStatusAnim.Play("Open");
+                            DeselectAll();
+
+                            selected = sel;
+                            selected.Select();
+
+                            if (selected is DepartmentBase) departmentSelectContents.overtimeToggle.isOn = (selected as DepartmentBase).Overtime;
+                        }
+                        else
+                        {
+                            if (selected != null) selectStatusAnim.Play("Close");
+                            DeselectAll();
+                        }
+
+                    }
+                }
+            }
+            if (selected != null)
+            {
+                if (selected is Customer)
+                {
+                    var selectedCustomer = selected as Customer;
+                    customerSelect.SetActive(true);
+                    departmentSelect.SetActive(false);
+                    customerSelectContents.NameText.text = selectedCustomer.custName;
+                    customerSelectContents.Text1Text.text = selectedCustomer.CurrentActionName + " " + (selectedCustomer.CurrentActionName == "Shopping" ? MarketManager.GetGameNames(selectedCustomer.GameDemand) : "");
+                    customerSelectContents.Bar1Slider.maxValue = 100;
+                    customerSelectContents.Bar1Slider.value = selectedCustomer.Happiness;
+                    customerSelectContents.Progress1Slider.maxValue = selectedCustomer.MaxProgressTime;
+                    customerSelectContents.Progress1Slider.value = selectedCustomer.CurrentProgressTime;
+                    customerSelectContents.stat1.text = selectedCustomer.Visits.ToString("n0");
+                    customerSelectContents.stat2.text = string.Format("${0:n0}", selectedCustomer.TotalSpendings);
+                }
+                else if (selected is DepartmentBase)
+                {
+                    var selectedDept = selected as DepartmentBase;
+                    departmentSelect.SetActive(true);
+                    customerSelect.SetActive(false);
+                    departmentSelectContents.departmentName.text = selectedDept.departmentName;
+                    departmentSelectContents.trustBar.maxValue = 100;
+                    departmentSelectContents.trustBar.value = selectedDept.CurrentTrust;
+                    departmentSelectContents.staffs.text = selectedDept.CurrentStaff + "/" + selectedDept.MaximumStaff;
+                    departmentSelectContents.salary.text = string.Format("${0:N0}", 0);
+                    departmentSelectContents.workSpeedValue.text = string.Format("{0:N0}%", selectedDept.WorkSpeed * 100);
+                }
+
+
+            }
         }
-        if (selected != null)
+    }
+
+    IEnumerator SpawnTime()
+    {
+        while (true)
         {
-            if (selected is Customer)
+            if (MathRand.WeightedPick(new float[] { 100, baseVisitChance * 100 }) == 1 || mainMenuMode)
             {
-                var selectedCustomer = selected as Customer;
-                customerSelect.SetActive(true);
-                departmentSelect.SetActive(false);
-                customerSelectContents.NameText.text = selectedCustomer.custName;
-                customerSelectContents.Text1Text.text = selectedCustomer.CurrentActionName + " " + (selectedCustomer.CurrentActionName == "Shopping" ? MarketManager.GetGameNames(selectedCustomer.GameDemand) : "");
-                customerSelectContents.Bar1Slider.maxValue = 100;
-                customerSelectContents.Bar1Slider.value = selectedCustomer.Happiness;
-                customerSelectContents.Progress1Slider.maxValue = selectedCustomer.MaxProgressTime;
-                customerSelectContents.Progress1Slider.value = selectedCustomer.CurrentProgressTime;
-                customerSelectContents.stat1.text = selectedCustomer.Visits.ToString("n0");
-                customerSelectContents.stat2.text = string.Format("${0:n0}", selectedCustomer.TotalSpendings);
+                Transform start = MathRand.Pick(startPos);
+                int choice = MathRand.WeightedPick(new float[] { recurringCust.Count, newCustomerRatio });
+                if (choice == 1)
+                {
+                    Customer c = Instantiate(MathRand.Pick(customerObjects), start.position, start.rotation).GetComponent<Customer>();
+                    if (mainMenuMode) c.actionWeight = new float[] { 3, 6, 1 };
+                    c.custName = AssignCustomerName();
+                }
+                else CustomerReturn(MathRand.Pick(recurringCust)); //else we return it
+                isSpawning = false;
+                custCount++;
+                break;
             }
-            else if (selected is DepartmentBase)
-            {
-                var selectedDept = selected as DepartmentBase;
-                departmentSelect.SetActive(true);
-                customerSelect.SetActive(false);
-                departmentSelectContents.departmentName.text = selectedDept.departmentName;
-                departmentSelectContents.trustBar.maxValue = 100;
-                departmentSelectContents.trustBar.value = selectedDept.CurrentTrust;
-                departmentSelectContents.staffs.text = selectedDept.CurrentStaff + "/" + selectedDept.MaximumStaff;
-                departmentSelectContents.salary.text = string.Format("${0:N0}", 0);
-                departmentSelectContents.workSpeedValue.text = string.Format("{0:N0}%", selectedDept.WorkSpeed * 100);
-            }
-
-
+            else yield return new WaitForSeconds(1);
         }
     }
 
@@ -306,22 +331,12 @@ public class GameManager : MonoBehaviour {
         
     }
 
-    public void OpenShopPanel()
-    {
-        var state = shopAnimator.GetCurrentAnimatorStateInfo(0);
-        if (state.IsName("Closed") || state.IsName("Close")) shopAnimator.Play("Open");
-        else shopAnimator.Play("Close");
-        shopCanvas.sortingOrder = 1;
-        stockCanvas.sortingOrder = -2;
-    }
-
     public void OpenStatusPanel()
     {
         var state = statusAnimator.GetCurrentAnimatorStateInfo(0);
         if (state.IsName("Closed") || state.IsName("Close")) statusAnimator.Play("Open");
         else statusAnimator.Play("Close");
-        shopCanvas.sortingOrder = -1;
-        stockCanvas.sortingOrder = -2;
+        stockCanvas.sortingOrder = -1;
     }
 
     public void OpenStockPanel()
@@ -329,8 +344,7 @@ public class GameManager : MonoBehaviour {
         var state = stockAnimator.GetCurrentAnimatorStateInfo(0);
         if (state.IsName("Closed") || state.IsName("Close")) stockAnimator.Play("Open");
         else stockAnimator.Play("Close");
-        shopCanvas.sortingOrder = -1;
-        stockCanvas.sortingOrder = 2;
+        stockCanvas.sortingOrder = 1;
     }
 
     private void DaytimeManager_OnDayEnd()
@@ -345,9 +359,7 @@ public class GameManager : MonoBehaviour {
         if (Days > 0)
         {
             yield return new WaitWhile(() => { return custCount > 0; });
-            shopCanvas.sortingOrder = -1;
-            stockCanvas.sortingOrder = -2;
-            shopAnimator.Play("Closed");
+            stockCanvas.sortingOrder = -1;
             statusAnimator.Play("Closed");
             stockAnimator.Play("Closed");
 
@@ -358,9 +370,7 @@ public class GameManager : MonoBehaviour {
         }
         else
         {
-            stockCanvas.sortingOrder = -2;
-            shopCanvas.sortingOrder = -1;
-            shopAnimator.Play("Closed");
+            stockCanvas.sortingOrder = -1;
             statusAnimator.Play("Closed");
             stockAnimator.Play("Closed");
             EndDayManager.ShowEndDayPanel();
@@ -491,29 +501,36 @@ public class GameManager : MonoBehaviour {
 
     public static float CommitTransaction(Customer cust, GameType game)
     {
-        if(Logistics.GetStock(game) > 0)
+        if (!instance.mainMenuMode)
         {
-            //Success
-            cust.CommitTransaction(true);
-            float revenue = MarketManager.GetSalePrice(game);
-            Cash += revenue;
-            CurrentXP += revenue;
-            EndDayManager.AddRevenue(game, revenue);
-            Logistics.ExpendGame(game);
-            return revenue;
+            if (Logistics.GetStock(game) > 0)
+            {
+                //Success
+                cust.CommitTransaction(true);
+                float revenue = MarketManager.GetSalePrice(game);
+                Cash += revenue;
+                CurrentXP += revenue;
+                EndDayManager.AddRevenue(game, revenue);
+                Logistics.ExpendGame(game);
+                return revenue;
+            }
+            else
+            {
+                //Failure
+                cust.CommitTransaction(false);
+                return 0;
+            }
         }
         else
         {
-            //Failure
-            cust.CommitTransaction(false);
+            cust.CommitTransaction(true);
             return 0;
         }
-        
     }
 
     public static void CustomerLeave(GameObject custObj)
     {
-        if (instance.selected as Customer == custObj.GetComponent<Customer>())
+        if (!instance.mainMenuMode && instance.selected as Customer == custObj.GetComponent<Customer>())
         {
             instance.selectStatusAnim.Play("Close");
             instance.DeselectAll();

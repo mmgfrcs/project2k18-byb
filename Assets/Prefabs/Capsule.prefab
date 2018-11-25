@@ -184,16 +184,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   startingHappiness: 60
-  baseVisitChance: 0.8
   actionWeight:
   - 6
   - 4
   - 1
-  debugText: {fileID: 0}
   lookAngleBuffer: 0.25
   lookTime: 4
-  complainTime: 20
-  wanderTime: 10
+  wanderTime: 24
   outlineMaterial: {fileID: 2100000, guid: 18d89dc922e430148bd17ace0cd806b5, type: 2}
 --- !u!136 &136511709958980500
 CapsuleCollider:

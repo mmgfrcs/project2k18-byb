@@ -22,7 +22,7 @@ public class EndDayManager : MonoBehaviour {
     public Animator faderAnimator;
 
     [Header("UI - Finance")]
-    public GameObject financeSection;
+    public GameObject financeSection, netRevenue, expenseByDept;
     public FinanceReportStruct[] financeReportRows;
     public FinanceReportStruct[] netRevenueRows;
     public FinanceReportStruct[] expenseByDeptRows;
@@ -52,15 +52,25 @@ public class EndDayManager : MonoBehaviour {
     public GameObject overtimeSection;
     public OvertimeEntry[] overtimeRows;
 
+    [Header("UI - Marketing")]
+    public GameObject marketingSection;
+
+    [Header("UI - Shop")]
+    public GameObject shopSection;
+
+    [Header("UI - Special ABilities")]
+    public GameObject abilitiesSection;
+
     static EndDayManager instance;
     int mode = 0;
     int toloan = 0;
     
-    List<System.Tuple<string, string>> expenseString;
+    List<System.Tuple<string, string>> expenseString, expenseByDeptString;
     Dictionary<string, DepartmentBase> overtimeAssociation = new Dictionary<string, DepartmentBase>();
 
     //Lists
     float[] gameRevenues = new float[5];
+    int[] restocksCopy = new int[5], restocksOrig = new int[5];
     List<ExpensesData> expenses = new List<ExpensesData>();
 
     int[] gameSaleCount = new int[5];
@@ -96,6 +106,36 @@ public class EndDayManager : MonoBehaviour {
                 financeReportRows[i].value.text = content.Item2;
             }
         }
+
+        if (GameManager.IsDepartmentExists(Departments.Finance))
+        {
+            expenseByDept.SetActive(true);
+            financeDeptMissingObject.SetActive(false);
+            
+            if (expenseByDeptString == null || expenseByDeptString.Count == 0)
+            {
+                for (int i = 0; i < expenseByDeptRows.Length; i++)
+                {
+                    expenseByDeptRows[i].label.text = "";
+                    expenseByDeptRows[i].value.text = "";
+                }
+            }
+            else
+            {
+                for (int i = 0; i < expenseByDeptRows.Length; i++)
+                {
+                    expenseByDeptRows[i].label.text = expenseByDeptString[i].Item1;
+                    expenseByDeptRows[i].value.text = expenseByDeptString[i].Item2;
+                }
+            }
+        }
+        else
+        {
+            expenseByDept.SetActive(false);
+            financeDeptMissingObject.SetActive(true);
+        }
+
+        netRevenue.SetActive(false);
     }
 
     void InitializeOvertime()
@@ -140,29 +180,60 @@ public class EndDayManager : MonoBehaviour {
     {
         expenseString = new List<System.Tuple<string, string>>();
         float total = 0;
-        foreach (var rev in expenses) total += rev.amount;
+        foreach (var rev in expenses) total += rev.amount + rev.amountMod;
+
+        //Group expenses by type
+        List<System.Tuple<string, float>> expenseGroup = new List<System.Tuple<string, float>>();
+        float totalGroup = 0;
+
+        List<ExpensesData> salaryExpense = expenses.FindAll(x => x.type == ExpenseType.Salary);
+        foreach (var sub in salaryExpense) totalGroup += sub.amount + sub.amountMod;
+        ExpensesData maintenanceExpense = expenses.Find(x => x.type == ExpenseType.Maintenance);
+        ExpensesData loanExpense = expenses.Find(x => x.type == ExpenseType.Loan);
+
+        if (maintenanceExpense != null) expenseGroup.Add(System.Tuple.Create("Maintenance", maintenanceExpense.amount + maintenanceExpense.amountMod));
+        if (totalGroup != 0) expenseGroup.Add(System.Tuple.Create("Salary", totalGroup));
+        if(loanExpense != null) expenseGroup.Add(System.Tuple.Create("Loans", loanExpense.amount + loanExpense.amountMod));
+
         expenseString.Add(System.Tuple.Create("Total Expenses", string.Format("${0:N0}", total)));
-        for (int i = 0; i < financeReportRows.Length; i++)
+        for (int i = 1; i < financeReportRows.Length; i++)
         {
-            if (i == 0) financeReportRows[i].value.text = string.Format("${0:N0}", total);
+
+            if (i <= expenseGroup.Count)
+            {
+                expenseString.Add(
+                    System.Tuple.Create(string.Format("- {0}", expenseGroup[i - 1].Item1),
+                    string.Format("${0:N0}", expenseGroup[i - 1].Item2)
+                ));
+            }
             else
             {
-                if (i <= expenses.Count)
-                {
-                    expenseString.Add(
-                        System.Tuple.Create(string.Format("- {0}", expenses[i - 1].type.ToString()),
-                        string.Format("${0:N0}", expenses[i - 1].amount)
-                        ));
+                expenseString.Add(System.Tuple.Create("", ""));
+                financeReportRows[i].label.text = "";
+                financeReportRows[i].value.text = "";
+            }
+            
+        }
 
-                }
-                else
-                {
-                    expenseString.Add(System.Tuple.Create("", ""));
-                    financeReportRows[i].label.text = "";
-                    financeReportRows[i].value.text = "";
-                }
+        expenseByDeptString = new List<System.Tuple<string, string>>();
+
+        expenseByDeptString.Add(System.Tuple.Create("Salary by Department", ""));
+
+        for (int i = 1; i < expenseByDeptRows.Length; i++)
+        {
+            if (i <= salaryExpense.Count)
+            {
+                expenseByDeptString.Add(System.Tuple.Create(
+                    string.Format("- {0}", salaryExpense[i - 1].department.ToString()),
+                    string.Format("${0:N0}", salaryExpense[i - 1].amount + salaryExpense[i - 1].amountMod)
+                ));
+            }
+            else
+            {
+                expenseByDeptString.Add(System.Tuple.Create("", ""));
             }
         }
+
         InitializeExpense();
         
     }
@@ -189,6 +260,41 @@ public class EndDayManager : MonoBehaviour {
                 financeReportRows[i].value.text = "";
             }
         }
+
+        if (GameManager.IsDepartmentExists(Departments.Finance))
+        {
+            netRevenue.SetActive(true);
+            financeDeptMissingObject.SetActive(false);
+            total = 0;
+            for (int i = 1; i < netRevenueRows.Length; i++)
+            {
+                if (MarketManager.IsGameAvailable((GameType)(i - 1)))
+                {
+                    netRevenueRows[i].label.text = string.Format("- {0}", MarketManager.GetGameNames((GameType)(i - 1)));
+                    float net = gameRevenues[i - 1] - MarketManager.GetBuyPrice(i - 1) * restocksCopy[i - 1];
+                    if(net >=0) netRevenueRows[i].value.text = string.Format("${0:N0}", net);
+                    else netRevenueRows[i].value.text = string.Format("<color=#ff6666>-${0:N0}</color>", -net);
+                    total += net;
+                }
+                else
+                {
+                    netRevenueRows[i].label.text = "";
+                    netRevenueRows[i].value.text = "";
+                }
+            }
+
+            netRevenueRows[0].label.text = "Net Revenues";
+            if (total >= 0) netRevenueRows[0].value.text = string.Format("${0:N0}", total);
+            else netRevenueRows[0].value.text = string.Format("<color=#ff6666>-${0:N0}</color>", -total);
+        }
+        else
+        {
+            netRevenue.SetActive(false);
+            financeDeptMissingObject.SetActive(true);
+        }
+
+        expenseByDept.SetActive(false);
+
     }
 
     void PopulateInitialRestock()
@@ -285,11 +391,8 @@ public class EndDayManager : MonoBehaviour {
     {
         for(int i = 0; i < expenses.Count; i++)
         {
-            if (GameManager.IsDepartmentFunctional(Departments.Finance))
-            {
-                Finance fin = GameManager.GetDeptScript(Departments.Finance) as Finance;
-                GameManager.Cash -= fin.ProcessExpense(expenses[i].amount, GameManager.GetTotalStaffs());
-            }
+            GameManager.Cash -= expenses[i].amount + expenses[i].amountMod;
+            
         }
 
         LoanData data = MarketManager.GetLoanData(toloan);
@@ -297,7 +400,7 @@ public class EndDayManager : MonoBehaviour {
         {
             MarketManager.PayLoanDaily();
             data = MarketManager.GetLoanData(toloan);
-            UpdateExpense(ExpenseType.Loan, Departments.Start, data.amount / data.term);
+            AddExpense(ExpenseType.Loan, Departments.Start, data.amount / data.term);
         }
 
         PopulateExpense();
@@ -315,6 +418,9 @@ public class EndDayManager : MonoBehaviour {
          * 4 Forecast 
          * 5 Prices
          * 6 Loan
+         * 7 Marketing
+         * 8 Shop
+         * 9 Special Abilities
          */
         instance.moneyText.text = string.Format("${0:N0}", GameManager.Cash);
         //Hide all sections
@@ -324,6 +430,10 @@ public class EndDayManager : MonoBehaviour {
         pricesSection.SetActive(false);
         forecastSection.SetActive(false);
         loanSection.SetActive(false);
+        marketingSection.SetActive(false);
+        shopSection.SetActive(false);
+        abilitiesSection.SetActive(false);
+
         //TODO do the same for Overtime and Forecast
         switch (page)
         {
@@ -366,6 +476,21 @@ public class EndDayManager : MonoBehaviour {
             case 6:
                 {
                     loanSection.SetActive(true);
+                    break;
+                }
+            case 7:
+                {
+                    marketingSection.SetActive(true);
+                    break;
+                }
+            case 8:
+                {
+                    shopSection.SetActive(true);
+                    break;
+                }
+            case 9:
+                {
+                    abilitiesSection.SetActive(true);
                     break;
                 }
             default:
@@ -425,22 +550,17 @@ public class EndDayManager : MonoBehaviour {
     {
         OnSliderValueChange(val, 4);
     }
-    #endregion
-
-    #region Prices Button Actions
-    public void OnPricesValueChange(int id)
-    {
-        UpdatePricesUI(id);
-    }
 
     public void OnCommit()
     {
+        restocksOrig = new int[5];
         float totalCash = 0;
         for (int i = 0; i < restockRows.Length; i++)
         {
             if (MarketManager.IsGameAvailable(i) && addedStocks[i] > 0)
             {
                 totalCash += addedStocks[i] * MarketManager.GetBuyPrice(i);
+                restocksOrig[i] += addedStocks[i];
                 //TODO use logistics
                 Logistics.RestockGame((GameType)i, addedStocks[i]);
 
@@ -452,6 +572,15 @@ public class EndDayManager : MonoBehaviour {
 
         PopulateInitialRestock();
     }
+    #endregion
+
+    #region Prices Button Actions
+    public void OnPricesValueChange(int id)
+    {
+        UpdatePricesUI(id);
+    }
+
+    
     #endregion
 
     #region Loans Button Actions
@@ -560,6 +689,7 @@ public class EndDayManager : MonoBehaviour {
             instance.titleText.text = string.Format(instance.dayEndTitle, GameManager.Days);
             if (DaytimeManager.TimeHour > 15) instance.PayExpenses();
         }
+        instance.restocksCopy = instance.restocksOrig;
         instance.addedStocks = new int[5];
         instance.endDayPanel.SetActive(true);
         instance.categoryButtons[3].interactable = true;
@@ -589,76 +719,49 @@ public class EndDayManager : MonoBehaviour {
 
     public static void AddRevenue(GameType game, float amt)
     {
+        if (GameManager.isInDemoMode) return;
         instance.gameRevenues[(int)game] += amt;
         instance.gameSaleCount[(int)game]++;
     }
-
-    public static void AddExpense(ExpenseType type, Departments dept, float amt, int startday = 0, int duration = 0)
+    
+    public static void AddExpense(ExpenseType type, Departments dept, float amt, float amtMod = 0)
     {
-        if (type != ExpenseType.Salary)
+        if (GameManager.isInDemoMode) return;
+        RemoveExpense(type, dept);
+
+        ExpensesData data = new ExpensesData()
         {
-            var expense = instance.expenses.Find(x => x.type == type);
-            if (expense != null)
-            {
-                var exp = instance.expenses[instance.expenses.IndexOf(expense)];
-                exp.amount += amt;
-                if (startday > 0) exp.startDay = startday;
-                if (duration > 0) exp.duration = duration;
-            }
-            else instance.expenses.Add(new ExpensesData()
+            type = type,
+            department = dept,
+            amount = amt,
+            amountMod = amtMod
+        };
+        instance.expenses.Add(data);
+    }
+	
+    public static void ModifyExpense(ExpenseType type, Departments dept, float amtMod)
+    {
+        if (GameManager.isInDemoMode) return;
+        ExpensesData foundData = instance.expenses.Find(x => x.type == type && x.department == dept);
+
+        if (foundData != null)
+        {
+            instance.expenses.Remove(foundData);
+            instance.expenses.Add(new ExpensesData()
             {
                 type = type,
                 department = dept,
-                amount = amt,
-                startDay = startday,
-                duration = duration
-            });
-        }
-        else
-        {
-            var expense = instance.expenses.FindAll(x => x.type == type);
-            if (expense.Count != 0)
-            {
-                var exp = expense.Find(x => x.department == dept);
-                exp.amount += amt;
-                if (startday > 0) exp.startDay = startday;
-                if (duration > 0) exp.duration = duration;
-            }
-            else instance.expenses.Add(new ExpensesData()
-            {
-                type = type,
-                department = dept,
-                amount = amt,
-                startDay = startday,
-                duration = duration
+                amount = foundData.amount + amtMod,
+                amountMod = foundData.amountMod
             });
         }
     }
-	
-    public static void UpdateExpense(ExpenseType type, Departments dept, float amt, int startday = 0, int duration = 0)
+
+    public static void RemoveExpense(ExpenseType type, Departments dept)
     {
-        if (type != ExpenseType.Salary)
-        {
-            var expense = instance.expenses.Find(x => x.type == type);
-            if (expense != null)
-            {
-                var exp = instance.expenses[instance.expenses.IndexOf(expense)];
-                exp.amount = amt;
-                if (startday > 0) exp.startDay = startday;
-                if (duration > 0) exp.duration = duration;
-            }
-        }
-        else
-        {
-            var expense = instance.expenses.FindAll(x => x.type == type);
-            if (expense.Count != 0)
-            {
-                var exp = expense.Find(x => x.department == dept);
-                exp.amount = amt;
-                if (startday > 0) exp.startDay = startday;
-                if (duration > 0) exp.duration = duration;
-            }
-        }
+        if (GameManager.isInDemoMode) return;
+        ExpensesData foundData = instance.expenses.Find(x => x.type == type && x.department == dept);
+        if (foundData != null) instance.expenses.Remove(foundData);
     }
 
     // Update is called once per frame
@@ -705,5 +808,5 @@ public class ExpensesData
     public ExpenseType type;
     public Departments department;
     public int startDay, duration;
-    public float amount;
+    public float amount, amountMod;
 }

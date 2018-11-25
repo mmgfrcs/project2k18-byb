@@ -1,5 +1,5 @@
 # Build Your Business - Balancing Parameters
-*This document is updated for version 0.1.24b. Game version number can be seen in this repo's README*
+*This document is updated for version 0.2.3b. Game version number can be seen in this repo's README*
 
 Balancing the game is done by changing the parameters exposed in the inspector. Almost every numbers in-game can be changed this way, and almost no text in-game are changeable this way. Here is how to do so:
 1. **Clone this project**, preferably using GitHub Desktop
@@ -15,7 +15,7 @@ Below is a comprehensive guide to each parameters along with how to find and cha
 
 Found In | Type | Default
 --- | --- | ---
-Managers > GameManager | Float | 50
+Managers > GameManager | Float | 1000
 
 Changes the starting amount of money players will get on a new game. Does not affect old games.
 
@@ -23,9 +23,41 @@ Changes the starting amount of money players will get on a new game. Does not af
 
 Found In | Type | Default
 --- | --- | ---
-Managers > GameManager | Float | 5
+Managers > GameManager | Float | 6
 
 The amount of time, in seconds, to wait before spawning a customer, new or returning.
+
+### Base Visit Chance
+
+Found In | Type | Default
+--- | --- | ---
+Managers > GameManager | Float | 0.5
+
+The base chance for a customer to visit the shop. Every second after Customer Spawn Time, this value is evaluated to figure out whether to spawn the customer or not.
+
+### Maintenane Cost
+
+Found In | Type | Default
+--- | --- | ---
+Managers > GameManager | Float | 100
+
+The flat daily cost for the Maintenance category. Currently flat, but will be changed later to account for growth.
+
+### New Customer Ratio
+
+Found In | Type | Default
+--- | --- | ---
+Managers > GameManager | Float | 1
+
+The base ratio for new customers. Players later modify this value in the Marketing section of the End Day Panel. This value is later compared against the number of recurring customers to find out their chances.
+
+### Base/Next XP Per Level
+
+Found In | Type | Default
+--- | --- | ---
+Managers > GameManager | Float | 1000
+
+The base XP required to level up. When the array overflowed, the value of Next XP Per Level is used to extend Base XP Per Level.
 
 ### Demand Keypoints
 
@@ -93,7 +125,7 @@ Note that these parameters are deprecated:
 
 Found In | Type | Default
 --- | --- | ---
-Prefab > Customer | Float | 60
+Prefabs > Capsule > Customer | Float | 60
 
 Set the starting Happiness of the customer when entering the shop for the first time (new customer)
 
@@ -101,7 +133,7 @@ Set the starting Happiness of the customer when entering the shop for the first 
 
 Found In | Type | Default
 --- | --- | ---
-Prefab > Customer | Float Array | [4, 3, 1]
+Prefabs > Capsule > Customer | Float Array | [4, 3, 1]
 
 Set the probability weight of customer actions when they enter the shop. To get the probability in percent, add all elements of the array together, then divide each element by the total and multiply it by 100.
 
@@ -113,19 +145,19 @@ Element | Action
 1 | **Wander** the customer will look around the shop, doing nothing for several seconds.
 2 | **Complain** the customer will go tothe Customer Service to complain, increasing happiness.
 
-### Look/Complain/Wander Time
+### Look/Wander Time
 
 Found In | Type | Default
 --- | --- | ---
-Prefab > Customer | Float | 4, 20 and 10 respectively 
+Prefabs > Capsule > Customer | Float | 4 and 24 respectively 
 
-Set the base duration of the customer looking/complaining/wandering. For Complain and Wander time, this is the total time spent complaining/wandering. For Look Time, this is the time for one of 2 stages of purchase: Looking at the Showcase and Purchasing the Game on the Cashier. Look and Complain time does not include walking time, while Wander Time does.
+Set the base duration of the customer looking/wandering. For Wander time, this is the total time spent wandering. For Look Time, this is the time for one of 2 stages of purchase: Looking at the Showcase and Purchasing the Game on the Cashier. Look time does not include walking time, while Wander Time does.
 
 ### Speed
 
 Found In | Type | Default
 --- | --- | ---
-Prefab > NavMeshAgent | Float | 5
+Prefabs > Capsule > NavMeshAgent | Float | 5
 
 The base walking speed of the Customer. Affects how fast Customers move around, but does not affect their action speed, which is affected by the Look/Complain/Wander Time parameter above.
 
@@ -135,13 +167,70 @@ Note that when the customer is wandering, their speed is reduced to 75%
 
 Found In | Type | Default
 --- | --- | ---
-Prefab > NavMeshAgent | Float | 180
+Prefabs > Capsule > NavMeshAgent | Float | 180
 
 The base turn speed of the Customer. Affects how fast Customers turn around. This parameter remains constant throughout the game.
 
 Increasing Speed and Angular speed will make the game *seem* faster.
 
+## Departments
+### Starting/Max Staffs
+
+Found In | Type | Default
+--- | --- | ---
+Building > Props > (any) | Integer | 1 and 1 respectively
+
+Modify the department's starting amount of staffs and maximum amount of staffs that can work on a single department at a time. Staffs affect the department'swork speed.
+
+### Salary
+
+Found In | Type | Default
+--- | --- | ---
+Building > Props > (any) | Float | 0
+
+Modify the staff's pay per day, per staff for the department.
+
+### Minimum Staff Ratio
+
+Found In | Type | Default
+--- | --- | ---
+Building > Props > (any) | Float | 0.2
+
+Modify the ratio of number of staffs required for the department to function. This number is multiplied by Maximum Staff to figure out Minimum Operating Staff. If the current number of staffs is below Minimum Operating Staff, the department will cease to function.
+
+The only department which ignores this value is Logistics (not yet implemented).
+
+### Full Speed Staff Ratio
+
+Found In | Type | Default
+--- | --- | ---
+Building > Props > (any) | Float | 0.8
+
+Modify the ratio of number of staffs required for the department to work at 100% speed/efficiency. This number is multiplied by Maximum Staff to figure out Minimum Full Speed Staff. If the current number of staffs is below Minimum Operating Staff, the department will work at a reduced speed/efficiency, affecting these departments:
+- Cashier/Customer Service: determines serve speed
+- Logistics: determines buy prices
+- Marketing: determines Ad effectiveness
+- Finance: determines Loan interest
+- HRD: determines train speed and Incentive effectiveness
+- Forecaster: determines forecast accuracy
+- R&D: determines cost of research and duration of discovery
+
+**There are department-specific variables that can be changed but their documentation is unavailable. Please only change these value if you know what you're doing!**
+- **Starting Capacity @ Building > Props > LGC**
+- **Starting Stocks @ Building > Props > LGC**
+- **Expense Ratios @ Building > Props > Finance**
+- **Initial Uncertainty @ Building > Props > Forc**
+
+
 ## Additional
+### Global Font
+
+Found In | Type | Default
+--- | --- | ---
+Managers > SceneFontChanger | Font | Hanken-Book
+
+Modify the fonts used for all texts in the scene. You'll have to modify this for all scenes currently being built to get the effect to the whole game. To check this, open File -> Build Settings. Built scenes have a checkmark on their left.
+
 ### Customer Name File
 
 Found In | Type | Default
@@ -159,6 +248,14 @@ Found In | Type | Default
 Managers > GameManager | Float | 1
 
 Adjust the sensitivity of each gesture. This setting is exposed to the player, so playing with this is not required.
+
+### Ad Names/Prices
+
+Found In | Type | Default
+--- | --- | ---
+Managers > GameManager | Float | [Radio, TV, Flyers, Balloon], [25, 50, 100, 200]
+
+The name of ads in the game, as well as their prices
 
 ### Game Start Title
 

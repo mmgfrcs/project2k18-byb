@@ -99,11 +99,13 @@ public class MarketManager : MonoBehaviour {
 
     public static void SetDemands(int gameId, float demand)
     {
-        instance.demandMod[gameId] = demand;
+        if (!GameManager.isInDemoMode)
+            instance.demandMod[gameId] = demand;
     }
 
     public static float GetAdPrice(int adId)
     {
+        if (GameManager.isInDemoMode) return 0;
         return instance.adPrices[adId];
     }
 
@@ -114,7 +116,8 @@ public class MarketManager : MonoBehaviour {
 
     public static AdData GetAdDataForGame(int gameId)
     {
-        return new AdData() {
+        if (GameManager.isInDemoMode) return new AdData();
+            return new AdData() {
             adLevel = instance.adLevel[gameId],
             adName = GetAdName(instance.adLevel[gameId]),
             adPrice = instance.adPrices[instance.adLevel[gameId]] };
@@ -122,6 +125,7 @@ public class MarketManager : MonoBehaviour {
 
     public static int GetDemands()
     {
+        if (GameManager.isInDemoMode) return MathRand.WeightedPick(new float[] { 1, 1, 1 });
         List<float> demandList = new List<float>();
         for(int i = 0; i < instance.gameNames.Count; i++) demandList.Add(instance.demands[i].Evaluate(GameManager.Days));
         return MathRand.WeightedPick(demandList);
@@ -136,6 +140,7 @@ public class MarketManager : MonoBehaviour {
 
     public static float GetSalePrice(int game)
     {
+        if (GameManager.isInDemoMode) return GetBaseSalePrice(game);
         return GetBaseSalePrice(game) * instance.pricesMod[game];
         //return instance.salePricesArr[game];
     }
@@ -167,6 +172,7 @@ public class MarketManager : MonoBehaviour {
 
     public static float GetBaseSalePrice(int game)
     {
+        if (GameManager.isInDemoMode) return 0;
         return instance.salePrices[game].Evaluate(GameManager.Days);
         //return instance.salePricesArr[game];
     }
@@ -189,9 +195,13 @@ public class MarketManager : MonoBehaviour {
 
     public static bool IsGameAvailable(int game)
     {
-        return game < instance.
-            gameNames.
-            Count && 
+        if (GameManager.isInDemoMode)
+        {
+            if (game < 3) return true;
+            else return false;
+        }
+
+        return game < instance.gameNames.Count && 
             instance.demands[game].Evaluate(GameManager.Days) != 0;
 
         //if (game > 2) return instance.demandArr.Length <= 4 && instance.demandArr[game] != 0;
@@ -200,6 +210,7 @@ public class MarketManager : MonoBehaviour {
 
     public static string GetGameNames(GameType game)
     {
+        if (GameManager.isInDemoMode) return "";
         return instance.gameNames[game];
     }
 

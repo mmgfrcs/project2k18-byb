@@ -17,4 +17,13 @@ public class EventManager : MonoBehaviour {
 		
 	}
 
+    internal static void RunEvent()
+    {
+
+    }
+
+    internal static void RollEvent()
+    {
+
+    }
 }

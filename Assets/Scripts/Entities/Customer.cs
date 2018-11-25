@@ -1,5 +1,4 @@
-﻿
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
@@ -60,8 +59,7 @@ public class Customer : MonoBehaviour, ISelectable {
     {
         {-1, "Leaving" }, {0, "Shopping" }, {1, "Looking Around" }, {2, "Complaining" }
     };
-
-
+    
     public void CommitTransaction(bool success, float amt = 5)
     {
         finished = true;
