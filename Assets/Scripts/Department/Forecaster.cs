@@ -14,7 +14,7 @@ public class Forecaster : DepartmentBase {
     {
         base.Start();
         departmentName = "Forecaster";
-        overtimeEffect = "Improves Next day Forecast's accuracy";
+        //overtimeEffect = "Improves Next day Forecast's accuracy";
         ForecastMaxFactor = initialUncertainty / 100 + 1;
         ForecastMinFactor = 1 - initialUncertainty / 100;
         UpdateSalary();

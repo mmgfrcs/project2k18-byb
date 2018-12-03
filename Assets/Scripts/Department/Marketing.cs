@@ -8,7 +8,7 @@ public class Marketing : DepartmentBase {
 	protected override void Start () {
         base.Start();
         departmentName = "Marketing";
-        overtimeEffect = "Increase Ads Effect";
+        //overtimeEffect = "Increase Ads Effect";
         UpdateSalary();
         GameManager.RegisterDepartment(Departments.Marketing, this);
     }

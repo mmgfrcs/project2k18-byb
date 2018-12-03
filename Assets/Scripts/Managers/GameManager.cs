@@ -41,21 +41,25 @@ public class GameManager : MonoBehaviour {
     [Range(0.1f, 3f)]
     public float pinchSensitivity = 1f;
 
-    [Header("UI")]
+    [Header("UI - General")]
     public Text moneyText;
     public Text timeText, stockText, levelText;
+
+    [Header("UI - Selection Panel")]
     public GameObject customerSelect, departmentSelect;
-    public Animator selectStatusAnim;
     public InfoPanel customerSelectContents;
     public DepartmentPanel departmentSelectContents;
+    public Button selectHireBtn, selectFireBtn;
 
-    [Header("Panels")]
+    [Header("UI - Canvas")]
     public Canvas stockCanvas;
 
     [Header("Animators")]
+    public Animator selectStatusAnim;
     public Animator statusAnimator;
     public Animator stockAnimator, pausePanelAnim, gameFaderAnim;
-
+    
+    internal static float VisitChance { get { return instance.baseVisitChance + instance.visitChanceMod; } }
     internal static float Cash { get; set; }
     internal static int Days { get; private set; }
     internal static int CompanyLevel { get; private set; }
@@ -70,9 +74,11 @@ public class GameManager : MonoBehaviour {
     public static event System.Action OnLevelUp, OnNextDay;
 
     string[] custNames;
+    float visitChanceMod = 0;
     static GameManager instance;
     static float[] _xp;
     static float _nxp;
+    Text selectedHireText;
     static Dictionary<Departments, DepartmentBase> depts = new Dictionary<Departments, DepartmentBase>();
     List<GameObject> recurringCust = new List<GameObject>();
 
@@ -93,7 +99,11 @@ public class GameManager : MonoBehaviour {
 
     // Use this for initialization
     void Start () {
-        if (instance == null || instance.mainMenuMode) instance = this;
+        if (instance == null || instance.mainMenuMode != mainMenuMode)
+        {
+            instance = this;
+            print("GameManager instance change, Showcase mode is " + (instance.mainMenuMode ? "on" : "off"));
+        }
         else Destroy(this);
 
         if (!mainMenuMode)
@@ -109,17 +119,19 @@ public class GameManager : MonoBehaviour {
 
             rt.gestureRecognizedEvent += (i) =>
             {
-                if (canSpawnCustomer) cameraPivot.Rotate(Vector3.up, -rt.deltaRotation * rotateSensitivity, Space.World);
+                if (!EndDayManager.IsPanelOpen) cameraPivot.Rotate(Vector3.up, -rt.deltaRotation * rotateSensitivity, Space.World);
             };
 
             pr.gestureRecognizedEvent += (i) =>
             {
-                if (canSpawnCustomer) Camera.main.transform.Translate(Vector3.forward * 2 * pr.deltaScale * pinchSensitivity);
+                if (!EndDayManager.IsPanelOpen) Camera.main.transform.Translate(Vector3.forward * 2 * pr.deltaScale * pinchSensitivity);
             };
             TouchKit.addGestureRecognizer(rt);
             TouchKit.addGestureRecognizer(pr);
 
             DaytimeManager.OnDayEnd += DaytimeManager_OnDayEnd;
+
+            selectedHireText = selectHireBtn.GetComponentInChildren<Text>();
 
             gameFaderAnim.Play("FadeOut");
         }
@@ -129,7 +141,7 @@ public class GameManager : MonoBehaviour {
     void Update () {
         if(!depts.ContainsKey(Departments.Logistics) || !depts.ContainsKey(Departments.Cashier) || !depts.ContainsKey(Departments.Showcase))
         {
-            Debug.LogError("Cannot load game: Department requirements not met");
+            Debug.LogError("Cannot load game: Department requirements not met\nRequired Logistics, Cashier and Showcase");
             enabled = false;
         }
 
@@ -162,6 +174,7 @@ public class GameManager : MonoBehaviour {
 
                 if (db != null)
                 {
+                    status.department = db;
                     status.departmentName.text = db.departmentName;
                     status.trustSlider.maxValue = 100;
                     status.trustSlider.value = db.CurrentTrust;
@@ -172,10 +185,10 @@ public class GameManager : MonoBehaviour {
                 else status.gameObject.SetActive(false);
             }
 
-            stockTab.totalStocks.text = string.Format("{0:N0}/{1:N0}", Logistics.GetTotalStocks(), Logistics.Capacity);
-            stockTab.totalStocksBar.maxValue = Logistics.Capacity;
+            stockTab.totalStocks.text = string.Format("{0:N0}/{1:N0}", Logistics.GetTotalStocks(), Logistics.GetCapacity());
+            stockTab.totalStocksBar.maxValue = Logistics.GetCapacity();
             stockTab.totalStocksBar.value = Logistics.GetTotalStocks();
-            stockTab.totalStocksFill.color = Color.HSVToRGB((1 - (float)Logistics.GetTotalStocks() / Logistics.Capacity) / 3.6f, 1, 1);
+            stockTab.totalStocksFill.color = Color.HSVToRGB((1 - (float)Logistics.GetTotalStocks() / Logistics.GetCapacity()) / 3.6f, 1, 1);
             for (i = 0; i < 5; i++)
             {
                 if (MarketManager.IsGameAvailable((GameType)i))
@@ -193,7 +206,7 @@ public class GameManager : MonoBehaviour {
             }
 
             //Input (touch)
-            if (DaytimeManager.IsRunning && Time.timeScale != 0)
+            if (Time.timeScale != 0 && !EndDayManager.IsPanelOpen)
             {
                 var touch = Input.touches;
                 if (touch.Length == 1 && touch[0].deltaPosition.magnitude > 0.2f)
@@ -254,11 +267,17 @@ public class GameManager : MonoBehaviour {
                     departmentSelectContents.trustBar.maxValue = 100;
                     departmentSelectContents.trustBar.value = selectedDept.CurrentTrust;
                     departmentSelectContents.staffs.text = selectedDept.CurrentStaff + "/" + selectedDept.MaximumStaff;
-                    departmentSelectContents.salary.text = string.Format("${0:N0}", 0);
+                    departmentSelectContents.salary.text = string.Format("${0:N0}", selectedDept.salary * selectedDept.CurrentStaff);
+                    if (selected is Cashier || selected is CustomerService) departmentSelectContents.workSpeedLbl.text = "Work Speed";
+                    else departmentSelectContents.workSpeedValue.text = "Effectiveness";
                     departmentSelectContents.workSpeedValue.text = string.Format("{0:N0}%", selectedDept.WorkSpeed * 100);
+
+                    selectedHireText.text = string.Format("Hire (${0:N0})", selectedDept.StaffHireCost);
+                    if (Cash < selectedDept.StaffHireCost || selectedDept.CurrentStaff >= selectedDept.MaximumStaff) selectHireBtn.interactable = false;
+                    else selectHireBtn.interactable = true;
+                    if (selectedDept.CurrentStaff > 0) selectFireBtn.interactable = true;
+                    else selectFireBtn.interactable = false;
                 }
-
-
             }
         }
     }
@@ -267,7 +286,7 @@ public class GameManager : MonoBehaviour {
     {
         while (true)
         {
-            if (MathRand.WeightedPick(new float[] { 100, baseVisitChance * 100 }) == 1 || mainMenuMode)
+            if (MathRand.WeightedPick(new float[] { Mathf.Max(0, (1 - VisitChance) * 100), Mathf.Min(100, VisitChance * 100) }) == 1 || mainMenuMode)
             {
                 Transform start = MathRand.Pick(startPos);
                 int choice = MathRand.WeightedPick(new float[] { recurringCust.Count, newCustomerRatio });
@@ -294,6 +313,19 @@ public class GameManager : MonoBehaviour {
         }
     }
 
+    public void OnHireSelectedStaff()
+    {
+        DepartmentBase select = selected as DepartmentBase;
+        Cash -= select.StaffHireCost;
+        select.AddStaff();
+    }
+
+    public void OnFireSelectedStaff()
+    {
+        DepartmentBase select = selected as DepartmentBase;
+        select.RemoveStaff();
+    }
+
     public void PauseGame()
     {
         Time.timeScale = 0;
@@ -304,6 +336,21 @@ public class GameManager : MonoBehaviour {
     {
         Time.timeScale = 1;
         pausePanelAnim.Play("Close");
+    }
+
+    public void ExitGame()
+    {
+
+    }
+
+    public void SaveGameState()
+    {
+
+    }
+
+    public void LoadGameState()
+    {
+
     }
 
     private void DeselectAll()
@@ -360,6 +407,7 @@ public class GameManager : MonoBehaviour {
         {
             yield return new WaitWhile(() => { return custCount > 0; });
             stockCanvas.sortingOrder = -1;
+            if (selected != null) DeselectAll();
             statusAnimator.Play("Closed");
             stockAnimator.Play("Closed");
 
@@ -392,15 +440,29 @@ public class GameManager : MonoBehaviour {
         }
     }
 
+    public static void SetVisitChanceMod(float mod, bool adjust = false)
+    {
+        if (adjust) instance.visitChanceMod += mod;
+        else instance.visitChanceMod = mod;
+    }
+
+    public static void BuyItem(ShopEntry entry)
+    {
+        entry.gameObject.SetActive(false);
+        Cash -= entry.itemPrice;
+
+        //switch-case Item ID
+    }
+
     public static void RegisterDepartment(Departments dept, DepartmentBase deptScript)
     {
         print("Department Registered: " + dept);
         depts.Add(dept, deptScript);
     }
-
+    
     public static void RegisterMap(Transform[] startPos, Transform[] wanderPos)
     {
-
+        throw new System.NotImplementedException("RegisterMap is not implemented");
     }
 
     public static void NextDay(bool isDay, GameObject panel = null)
@@ -435,15 +497,15 @@ public class GameManager : MonoBehaviour {
         return instance.cid++;
     }
 
-    static Dictionary<Departments, List<Transform>> intr = new Dictionary<Departments, List<Transform>>();
-    static List<Transform> wPos = new List<Transform>();
+    Dictionary<Departments, List<Transform>> intr = new Dictionary<Departments, List<Transform>>();
+    List<Transform> wPos = new List<Transform>();
 
     public static Transform GetWander()
     {
-        if (wPos.Count == 0) wPos.AddRange(instance.wanderPos);
+        if (instance.wPos.Count == 0) instance.wPos.AddRange(instance.wanderPos);
 
-        var wand = wPos[0];
-        wPos.RemoveAt(0);
+        var wand = instance.wPos[0];
+        instance.wPos.RemoveAt(0);
         return wand;
     }
 
@@ -462,12 +524,13 @@ public class GameManager : MonoBehaviour {
     {
         if (dept == Departments.Start) return MathRand.Pick(instance.startPos);
         if (!IsDepartmentFunctional(dept)) return null;
-        if (!intr.ContainsKey(dept)) intr.Add(dept, new List<Transform>());
 
-        if(intr[dept].Count == 0) intr[dept].AddRange(MathRand.ChooseSetDependent(depts[dept].interactablePosition, depts[dept].interactablePosition.Length));
+        if (!instance.intr.ContainsKey(dept)) instance.intr.Add(dept, new List<Transform>());
+
+        if(instance.intr[dept].Count == 0) instance.intr[dept].AddRange(MathRand.ChooseSetDependent(depts[dept].interactablePosition, depts[dept].interactablePosition.Length));
         
-        var interact = intr[dept][0];
-        intr[dept].RemoveAt(0);
+        var interact = instance.intr[dept][0];
+        instance.intr[dept].RemoveAt(0);
         return interact;
     }
 
@@ -487,6 +550,13 @@ public class GameManager : MonoBehaviour {
     {
         if (dept == Departments.Start) return null;
         return depts[dept];
+    }
+
+    public static List<DepartmentBase> GetAllDeptScripts()
+    {
+        List<DepartmentBase> deptsList = new List<DepartmentBase>();
+        foreach (var i in depts) deptsList.Add(i.Value);
+        return deptsList;
     }
 
     public static int GetTotalStaffs()
@@ -509,7 +579,7 @@ public class GameManager : MonoBehaviour {
                 cust.CommitTransaction(true);
                 float revenue = MarketManager.GetSalePrice(game);
                 Cash += revenue;
-                CurrentXP += revenue;
+                CurrentXP += revenue * 2;
                 EndDayManager.AddRevenue(game, revenue);
                 Logistics.ExpendGame(game);
                 return revenue;

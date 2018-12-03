@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class Showcase : DepartmentBase {
 
+    public override bool IsFunctional { get { return true; } }
+
     // Use this for initialization
     protected override void Start()
     {

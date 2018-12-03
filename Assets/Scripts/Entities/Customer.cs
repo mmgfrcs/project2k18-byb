@@ -50,7 +50,6 @@ public class Customer : MonoBehaviour, ISelectable {
     
     bool finished = false, isInActivity = false;
     NavMeshAgent agent;
-    NavMeshObstacle obs;
     readonly Material origMat;
     int actionId = -1, step = 0;
     Vector3 startPos;
@@ -72,7 +71,6 @@ public class Customer : MonoBehaviour, ISelectable {
 
         CustomerID = GameManager.RequestID();
         agent = GetComponent<NavMeshAgent>();
-        obs = GetComponent<NavMeshObstacle>();
         origSpd = agent.speed;
         Happiness = startingHappiness;
         //What will this character do?
@@ -86,18 +84,25 @@ public class Customer : MonoBehaviour, ISelectable {
         GetComponent<MeshRenderer>().material.color = Color.white;
         finished = false;
         startPos = transform.position;
-        if (MathRand.WeightedPick(actionWeight) == 0)
+
+        float[] weight = new float[] {
+            GameManager.IsDepartmentFunctional(Departments.Cashier) ? actionWeight[0] : 0,
+            GameManager.IsDepartmentFunctional(Departments.CustService) ? actionWeight[1] : 0,
+            actionWeight[2]
+        };
+
+        if (MathRand.WeightedPick(weight) == 0)
         {
             GameDemand = (GameType)MarketManager.GetDemands();
             StartCoroutine(GoShopping());
             //Shopping
         }
-        else if (MathRand.WeightedPick(actionWeight) == 1)
+        else if (MathRand.WeightedPick(weight) == 1)
         {
             StartCoroutine(GoWander());
             //Wander
         }
-        else if (MathRand.WeightedPick(actionWeight) == 2 && GameManager.IsDepartmentFunctional(Departments.CustService))
+        else if (MathRand.WeightedPick(weight) == 2 && GameManager.IsDepartmentFunctional(Departments.CustService))
         {
             
             StartCoroutine(GoComplain()); //Complain
@@ -209,8 +214,17 @@ public class Customer : MonoBehaviour, ISelectable {
 
         while (CurrentProgressTime < wanderTime)
         {
-            //Move to wander point
-            agent.SetDestination(GameManager.GetWander().position);
+            //try
+            //{
+                //Move to wander point
+                agent.SetDestination(GameManager.GetWander().position);
+            //}
+            //catch (System.Exception)
+            //{
+            //    Visits--;
+            //    StartCoroutine(LeaveBusiness());
+            //}
+
             yield return new WaitUntil(() =>
             {
                 return CheckDistance(agent.destination) || CurrentProgressTime >= wanderTime;
@@ -226,6 +240,7 @@ public class Customer : MonoBehaviour, ISelectable {
             //Wait arbitrarily
             yield return new WaitForSeconds(Random.Range(1f, lookTime));
             SetObstruction(false);
+
         }
     }
 

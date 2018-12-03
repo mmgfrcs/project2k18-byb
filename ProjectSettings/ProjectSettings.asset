@@ -117,7 +117,7 @@ PlayerSettings:
     16:10: 1
     16:9: 1
     Others: 1
-  bundleVersion: 0.2.4b
+  bundleVersion: 0.2.14.5b
   preloadedAssets: []
   metroInputSource: 0
   wsaTransparentSwapchain: 0
@@ -152,7 +152,7 @@ PlayerSettings:
   applicationIdentifier:
     Android: com.devsgat.byb
   buildNumber: {}
-  AndroidBundleVersionCode: 25111853
+  AndroidBundleVersionCode: 12030854
   AndroidMinSdkVersion: 21
   AndroidTargetSdkVersion: 0
   AndroidPreferredInstallLocation: 1

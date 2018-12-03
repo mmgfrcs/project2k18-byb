@@ -7,7 +7,7 @@ public class DepartmentBase : MonoBehaviour, ISelectable {
     public Transform[] interactablePosition;
     public Transform lookDirection;
     public int maxStaff = 1, startingStaff = 1;
-    public float salary;
+    public float salary, hireCost, managerHireCost;
     public float minimumStaffRatio = 0.2f;
     public float fullSpeedStaffRatio = 0.8f;
     
@@ -20,17 +20,23 @@ public class DepartmentBase : MonoBehaviour, ISelectable {
     public int MaximumStaff { get; protected set; } = 1;
     public float CurrentTrust { get; protected set; } = 60;
     public float BaseWorkSpeed { get; protected set; } = 1;
+    public float WorkSpeedMod { get; protected set; }
     public float WorkSpeed {
         get
         {
             float minStaff = Mathf.Ceil(MaximumStaff * minimumStaffRatio);
             float fullSpeedStaff = Mathf.Ceil(MaximumStaff * fullSpeedStaffRatio);
             if (CurrentStaff < minStaff) return 0;
-            if (fullSpeedStaff == minStaff) return BaseWorkSpeed;
-            return BaseWorkSpeed * Mathf.LerpUnclamped(0.75f, 1f, (CurrentStaff - minStaff) / (fullSpeedStaff - minStaff));
+            if (fullSpeedStaff == minStaff) return BaseWorkSpeed + WorkSpeedMod;
+
+            float workSpeed = (BaseWorkSpeed + WorkSpeedMod) * Mathf.LerpUnclamped(0.75f, 1f, (CurrentStaff - minStaff) / (fullSpeedStaff - minStaff));
+            if (CurrentTrust < 20) return workSpeed * ((CurrentTrust + 1) / 21);
+            return workSpeed;
         }
     }
-    internal bool IsFunctional { get { return WorkSpeed > 0 && CurrentTrust >= 20; } }
+    public virtual bool IsFunctional { get { return WorkSpeed > 0; } }
+    public float StaffHireCost { get { return CurrentTrust >= 20 ? hireCost : hireCost * 2; } }
+    public float ManagerHireCost { get { return CurrentTrust >= 20 ? managerHireCost : managerHireCost * 2; } }
 
     public virtual void Deselect()
     {
@@ -44,20 +50,25 @@ public class DepartmentBase : MonoBehaviour, ISelectable {
 
     // Use this for initialization
     protected virtual void Start () {
-        GameManager.OnNextDay += GameManager_OnNextDay;
+        GameManager.OnNextDay += OnOvertime;
         CurrentStaff = startingStaff;
         MaximumStaff = maxStaff;
 	}
 
-    protected virtual void GameManager_OnNextDay()
+    protected virtual void OnOvertime()
     {
 
     }
 
     // Update is called once per frame
     protected virtual void Update () {
-        CurrentTrust -= Time.deltaTime * trustDrainRate;
+        
 	}
+
+    internal virtual void AdjustTrust(float mod)
+    {
+        CurrentTrust = Mathf.Clamp(CurrentTrust + mod, 0, 100);
+    }
 
     internal virtual void AddStaff()
     {

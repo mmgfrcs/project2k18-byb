@@ -16,21 +16,20 @@ public class OptionsModule : MonoBehaviour {
         mixer.SetFloat("bgmVol", LinearToDb(bgmVolSlider.value));
         mixer.SetFloat("sfxVol", LinearToDb(sfxVolSlider.value));
 
-        unityPlayerClass = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
-        currentActivity = unityPlayerClass.GetStatic<AndroidJavaObject>("currentActivity");
-        context = currentActivity.Call<AndroidJavaObject>("getApplicationContext");
-        audioManagerClass = new AndroidJavaClass("android.media.AudioManager");
-        contextClass = new AndroidJavaClass("android.content.Context");
-        AudioManager_STREAM_MUSIC = audioManagerClass.GetStatic<int>("STREAM_MUSIC");
-        Context_AUDIO_SERVICE = contextClass.GetStatic<string>("AUDIO_SERVICE");
-        audioService = context.Call<AndroidJavaObject>("getSystemService", Context_AUDIO_SERVICE);
-
         if (Application.platform != RuntimePlatform.WindowsPlayer && Application.platform != RuntimePlatform.WindowsEditor)
         {
+            unityPlayerClass = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+            currentActivity = unityPlayerClass.GetStatic<AndroidJavaObject>("currentActivity");
+            context = currentActivity.Call<AndroidJavaObject>("getApplicationContext");
+            audioManagerClass = new AndroidJavaClass("android.media.AudioManager");
+            contextClass = new AndroidJavaClass("android.content.Context");
+            AudioManager_STREAM_MUSIC = audioManagerClass.GetStatic<int>("STREAM_MUSIC");
+            Context_AUDIO_SERVICE = contextClass.GetStatic<string>("AUDIO_SERVICE");
+            audioService = context.Call<AndroidJavaObject>("getSystemService", Context_AUDIO_SERVICE);
+
             masterVolSlider.interactable = false;
             androidAudioText.SetActive(true);
             mixer.SetFloat("masterVol", 0);
-            StartCoroutine(RefreshDeviceVolume());
         }
         else
         {
@@ -40,11 +39,19 @@ public class OptionsModule : MonoBehaviour {
             mixer.SetFloat("masterVol", LinearToDb(masterVolSlider.value));
         }
     }
-
+    float t = 0;
     // Update is called once per frame
     void Update()
     {
-
+        if (Application.platform != RuntimePlatform.WindowsPlayer && Application.platform != RuntimePlatform.WindowsEditor)
+        {
+            t += Time.deltaTime;
+            if (t > 0.5f)
+            {
+                t = 0;
+                GetAndroidVolume();
+            }
+        }
     }
 
     public void OnMasterChange(float value)
@@ -62,7 +69,7 @@ public class OptionsModule : MonoBehaviour {
     public void OnSFXChange(float value)
     {
         PlayerPrefs.SetFloat("sfxVol", value);
-        mixer.SetFloat("bgmVol", LinearToDb(value));
+        mixer.SetFloat("sfxVol", LinearToDb(value));
     }
 
     public float LinearToDb(float linear)
@@ -87,14 +94,5 @@ public class OptionsModule : MonoBehaviour {
         masterVolSlider.onValueChanged = null;
         masterVolSlider.maxValue = maxVol;
         masterVolSlider.value = vol;
-    }
-
-    IEnumerator RefreshDeviceVolume()
-    {
-        while (true)
-        {
-            yield return new WaitForSeconds(0.5f);
-            GetAndroidVolume();
-        }
     }
 }

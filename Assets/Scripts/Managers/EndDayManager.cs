@@ -62,6 +62,7 @@ public class EndDayManager : MonoBehaviour {
     public GameObject abilitiesSection;
 
     static EndDayManager instance;
+    public static bool IsPanelOpen { get; private set; }
     int mode = 0;
     int toloan = 0;
     
@@ -161,7 +162,6 @@ public class EndDayManager : MonoBehaviour {
                 
                 dept++;
             }
-            print("OVERTIME: dept = " + dept + ", Dept: " + db);
             if(db != null)
             {
                 overtimeAssociation.Add(db.departmentName, db);
@@ -308,7 +308,7 @@ public class EndDayManager : MonoBehaviour {
                 restockRows[i].stockText.text = string.Format("{0:N0}", Logistics.GetStock(i));
                 restockRows[i].priceText.text = "$0";
                 restockRows[i].stockSlider.value = 0;
-                restockRows[i].stockSlider.maxValue = Logistics.Capacity - Logistics.GetStock(i);
+                restockRows[i].stockSlider.maxValue = Logistics.GetCapacity() - Logistics.GetStock(i);
             }
             else
             {
@@ -433,8 +433,7 @@ public class EndDayManager : MonoBehaviour {
         marketingSection.SetActive(false);
         shopSection.SetActive(false);
         abilitiesSection.SetActive(false);
-
-        //TODO do the same for Overtime and Forecast
+        
         switch (page)
         {
             case 0:
@@ -561,7 +560,6 @@ public class EndDayManager : MonoBehaviour {
             {
                 totalCash += addedStocks[i] * MarketManager.GetBuyPrice(i);
                 restocksOrig[i] += addedStocks[i];
-                //TODO use logistics
                 Logistics.RestockGame((GameType)i, addedStocks[i]);
 
             }
@@ -624,6 +622,7 @@ public class EndDayManager : MonoBehaviour {
         }
         else
         {
+            IsPanelOpen = false;
             GameManager.NextDay(true, endDayPanel);
             instance.gameRevenues = new float[5];
             instance.gameSaleCount = new int[5];
@@ -670,11 +669,11 @@ public class EndDayManager : MonoBehaviour {
             instance.moneyText.color = Color.red;
         else instance.moneyText.color = Color.white;
 
-        if(Logistics.GetTotalStocks() + totalStock > Logistics.Capacity)
-            restockTitle.text = string.Format("Restock <color=red>({0}/{1})</color>", Logistics.GetTotalStocks() + totalStock, Logistics.Capacity);
-        else restockTitle.text = string.Format("Restock ({0}/{1})", Logistics.GetTotalStocks() + totalStock, Logistics.Capacity);
+        if(Logistics.GetTotalStocks() + totalStock > Logistics.GetCapacity())
+            restockTitle.text = string.Format("Restock <color=red>({0}/{1})</color>", Logistics.GetTotalStocks() + totalStock, Logistics.GetCapacity());
+        else restockTitle.text = string.Format("Restock ({0}/{1})", Logistics.GetTotalStocks() + totalStock, Logistics.GetCapacity());
 
-        if (Logistics.GetTotalStocks() + totalStock > Logistics.Capacity || GameManager.Cash - totalPrice < 0)
+        if (Logistics.GetTotalStocks() + totalStock > Logistics.GetCapacity() || GameManager.Cash - totalPrice < 0)
             instance.commitButton.interactable = false;
         else instance.commitButton.interactable = true;
         
@@ -683,6 +682,8 @@ public class EndDayManager : MonoBehaviour {
     public static void ShowEndDayPanel()
     {
         instance.InitializeExpense();
+        IsPanelOpen = true;
+        EventManager.EndEvent();
         if (GameManager.Days < 1) instance.titleText.text = instance.gameStartTitle;
         else
         {
@@ -693,8 +694,20 @@ public class EndDayManager : MonoBehaviour {
         instance.addedStocks = new int[5];
         instance.endDayPanel.SetActive(true);
         instance.categoryButtons[3].interactable = true;
+        //Forecast
         if (GameManager.IsDepartmentFunctional(Departments.Forecaster)) instance.categoryButtons[4].interactable = true;
         else instance.categoryButtons[4].interactable = false;
+        //Loans
+        if (GameManager.IsDepartmentFunctional(Departments.Finance)) instance.categoryButtons[6].interactable = true;
+        else instance.categoryButtons[6].interactable = false;
+        //Marketing
+        //if (GameManager.IsDepartmentFunctional(Departments.Marketing)) instance.categoryButtons[7].interactable = true;
+        /*else*/ instance.categoryButtons[7].interactable = false;
+        //Special Abilities
+        if (GameManager.IsDepartmentFunctional(Departments.HRD)) instance.categoryButtons[9].interactable = true;
+        else instance.categoryButtons[9].interactable = false;
+        //Shop
+        instance.categoryButtons[8].interactable = false; 
         instance.categoryButtons[0].isOn = true;
         instance.ChangePage(0);
 
@@ -708,11 +721,13 @@ public class EndDayManager : MonoBehaviour {
 
     public static void ShowStartDayPanel()
     {
+        EventManager.RunEvent();
         ShowEndDayPanel();
         instance.nextDayButtonText.text = "Start Day";
         instance.categoryButtons[3].interactable = false;
         instance.titleText.text = string.Format(instance.dayStartTitle, GameManager.Days);
         instance.faderAnimator.Play("FadeOut");
+        
         //TODO Set Game Sale Price
 
     }
