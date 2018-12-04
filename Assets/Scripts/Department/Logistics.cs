@@ -12,17 +12,23 @@ public class Logistics : DepartmentBase {
     public int startingCapacity = 50;
     public int[] startingStocks = new int[] { 20, 10, 5 };
 
-    public static int Capacity { get; private set; }
+    int Capacity { get; set; }
 
     int[] currentStocks = new int[5];
     int[] pendingStocks = new int[5];
+
+    int[] addedStocks = new int[5];
     static Logistics instance;
 
 	// Use this for initialization
 	protected override void Start () {
         if (instance == null) instance = this;
         else Destroy(this);
+        base.Start();
 
+        trustDrainRate = 0.1f;
+        departmentName = "Logistics";
+        overtimeEffect = "Increase obtained bought supplies";
         GameManager.RegisterDepartment(Departments.Logistics, this);
         Capacity = startingCapacity;
 
@@ -36,7 +42,33 @@ public class Logistics : DepartmentBase {
             ExpendGame(3);
             ExpendGame(4);
         }
-	}
+        UpdateSalary();
+    }
+
+    protected override void OnOvertime()
+    {
+        if (Overtime)
+        {
+            for(int i = 0; i < currentStocks.Length; i++)
+            {
+                RestockGame(i, Mathf.RoundToInt(Random.Range(0f, addedStocks[i] / 2f)));
+            }
+            CurrentTrust -= (10 + CurrentTrust * 0.05f);
+            Overtime = false;
+        }
+        addedStocks = new int[5];
+
+    }
+
+    internal void UpdateSalary()
+    {
+        UpdateSalary(Departments.Logistics);
+    }
+
+    public static int GetCapacity()
+    {
+        return instance.Capacity;
+    }
 
     public static int GetStock(GameType game)
     {
@@ -64,15 +96,23 @@ public class Logistics : DepartmentBase {
         instance.pendingStocks = new int[5];
     }
 
-    public static void RestockGame(int game, int amount = 1, bool order = false)
+    public static void RestockGame(int game, int amount = 1)
     {
-        if(order) instance.pendingStocks[game] = instance.pendingStocks[game] + Mathf.Abs(amount);
-        else instance.currentStocks[game] = instance.currentStocks[game] + Mathf.Abs(amount);
+        if (GetTotalStocks() + amount <= GetCapacity())
+        {
+            instance.currentStocks[game] += Mathf.Abs(amount);
+            instance.addedStocks[game] += amount;
+        }
+        else
+        {
+            instance.currentStocks[game] += (GetCapacity() - GetTotalStocks());
+            instance.addedStocks[game] += (GetCapacity() - GetTotalStocks());
+        }
     }
 
-    public static void RestockGame(GameType game, int amount = 1, bool order = false)
+    public static void RestockGame(GameType game, int amount = 1)
     {
-        RestockGame((int)game, amount, order);
+        RestockGame((int)game, amount);
     }
 
     public static void ExpendGame(int game, int amount = 1)

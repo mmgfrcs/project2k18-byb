@@ -1,15 +1,23 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
 public class MarketManager : MonoBehaviour {
     [Header("Market Dynamics")]
     public MarketKeypoint[] demandKeypoints;
     public MarketKeypoint[] saleKeypoints, buyKeypoints;
+    public string[] adNames = new string[] { "None", "Radio", "Flyers", "TV", "Balloon" };
+    public float[] adPrices = new float[] { 0, 25, 50, 100, 200 }, demandMod = new float[] { 1, 1, 1, 1, 1 }, permanentMod = new float[5];
 
+    [Header("Loans")]
+    public LoanData[] loans = new LoanData[3];
+    
+    LoanData currLoan = null;
     List<AnimationCurve> demands, salePrices, buyPrices;
 
     float[] pricesMod = new float[] { 1, 1, 1, 1, 1 };
+    int[] adLevel = new int[5];
     Dictionary<GameType, string> gameNames = new Dictionary<GameType, string>()
     {
         {GameType.GameA, "Edwin's" },
@@ -26,6 +34,7 @@ public class MarketManager : MonoBehaviour {
         if (instance == null) instance = this;
         else Destroy(this);
 
+        
         demands = new List<AnimationCurve>();
         //Each Game has its own curve, so loop that too
         for (int i = 0; i < gameNames.Count; i++)
@@ -61,8 +70,62 @@ public class MarketManager : MonoBehaviour {
         }
     }
 
+    public static LoanData GetLoanData(int id)
+    {
+        if (instance.currLoan != null && instance.currLoan.loanName == instance.loans[id].loanName) return instance.currLoan;
+        return instance.loans[id];
+    }
+
+    public static void TakeLoan(int id)
+    {
+        instance.currLoan = GetLoanData(id);
+        instance.currLoan.amount *= (1 + instance.currLoan.interest / 100);
+        instance.currLoan.taken = true;
+    }
+
+    public static void PayLoanDaily()
+    {
+        instance.currLoan.term--;
+        PayLoan(false, instance.currLoan.amount / instance.currLoan.term);
+    }
+
+    public static void PayLoan(bool sweep, float amount = 0)
+    {
+        if (sweep) instance.currLoan = null;
+        else instance.currLoan.amount -= amount;
+
+        if (instance.currLoan.term == 0) instance.currLoan = null;
+    }
+
+    public static void SetDemands(int gameId, float demand)
+    {
+        if (!GameManager.isInDemoMode)
+            instance.demandMod[gameId] = demand;
+    }
+
+    public static float GetAdPrice(int adId)
+    {
+        if (GameManager.isInDemoMode) return 0;
+        return instance.adPrices[adId];
+    }
+
+    public static string GetAdName(int adId)
+    {
+        return instance.adNames[adId];
+    }
+
+    public static AdData GetAdDataForGame(int gameId)
+    {
+        if (GameManager.isInDemoMode) return new AdData();
+            return new AdData() {
+            adLevel = instance.adLevel[gameId],
+            adName = GetAdName(instance.adLevel[gameId]),
+            adPrice = instance.adPrices[instance.adLevel[gameId]] };
+    }
+
     public static int GetDemands()
     {
+        if (GameManager.isInDemoMode) return MathRand.WeightedPick(new float[] { 1, 1, 1 });
         List<float> demandList = new List<float>();
         for(int i = 0; i < instance.gameNames.Count; i++) demandList.Add(instance.demands[i].Evaluate(GameManager.Days));
         return MathRand.WeightedPick(demandList);
@@ -77,6 +140,7 @@ public class MarketManager : MonoBehaviour {
 
     public static float GetSalePrice(int game)
     {
+        if (GameManager.isInDemoMode) return GetBaseSalePrice(game);
         return GetBaseSalePrice(game) * instance.pricesMod[game];
         //return instance.salePricesArr[game];
     }
@@ -108,6 +172,7 @@ public class MarketManager : MonoBehaviour {
 
     public static float GetBaseSalePrice(int game)
     {
+        if (GameManager.isInDemoMode) return 0;
         return instance.salePrices[game].Evaluate(GameManager.Days);
         //return instance.salePricesArr[game];
     }
@@ -130,7 +195,14 @@ public class MarketManager : MonoBehaviour {
 
     public static bool IsGameAvailable(int game)
     {
-        return game < instance.gameNames.Count && instance.demands[game].Evaluate(GameManager.Days) != 0;
+        if (GameManager.isInDemoMode)
+        {
+            if (game < 3) return true;
+            else return false;
+        }
+
+        return game < instance.gameNames.Count && 
+            instance.demands[game].Evaluate(GameManager.Days) != 0;
 
         //if (game > 2) return instance.demandArr.Length <= 4 && instance.demandArr[game] != 0;
         //else return instance.demandArr[game] != 0;
@@ -138,6 +210,7 @@ public class MarketManager : MonoBehaviour {
 
     public static string GetGameNames(GameType game)
     {
+        if (GameManager.isInDemoMode) return "";
         return instance.gameNames[game];
     }
 
@@ -209,4 +282,19 @@ public struct MarketKeypoint
 {
     public int day;
     public float[] dynamics;
+}
+
+public struct AdData
+{
+    public string adName;
+    public float adPrice;
+    public int adLevel;
+}
+[System.Serializable]
+public class LoanData
+{
+    public string loanName;
+    public float amount, interest;
+    public int term;
+    internal bool taken;
 }

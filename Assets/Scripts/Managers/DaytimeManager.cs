@@ -11,6 +11,7 @@ public class DaytimeManager : MonoBehaviour {
 
     public static int TimeHour { get { return instance.time.Hour; } }
     public static float TimeMinute { get { return instance.time.Minute; } }
+    public static bool IsRunning { get { return !instance.paused; } }
 
     static DaytimeManager instance;
     bool paused = false;
@@ -42,6 +43,7 @@ public class DaytimeManager : MonoBehaviour {
         //RenderSettings.ambientIntensity = intensityCurve.Evaluate(time.Hour + (time.Minute / 60f) + (time.Second * 3600));
         //RenderSettings.reflectionIntensity = intensityCurve.Evaluate(time.Hour + (time.Minute / 60f) + (time.Second * 3600));
         //RenderSettings.ba
+        lightTransform.GetComponent<Light>().intensity = intensityCurve.Evaluate(time.Hour + time.Minute / 60f);
         lightTransform.Rotate(Vector3.right * 15f * Time.deltaTime * timeSpeed / 3600);
     }
 
@@ -63,5 +65,6 @@ public class DaytimeManager : MonoBehaviour {
 
         instance.time = targetDate;
         instance.lightTransform.rotation = Quaternion.Euler((h - 6) * 15f, instance.lightTransform.rotation.y, instance.lightTransform.rotation.z);
+        instance.lightTransform.GetComponent<Light>().intensity = instance.intensityCurve.Evaluate(instance.time.Hour + instance.time.Minute / 60f);
     }
 }

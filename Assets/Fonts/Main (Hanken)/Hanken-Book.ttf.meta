@@ -1,0 +1,23 @@
+fileFormatVersion: 2
+guid: 4c5889470cc02684287bb505d1e2e7d5
+TrueTypeFontImporter:
+  externalObjects: {}
+  serializedVersion: 4
+  fontSize: 16
+  forceTextureCase: -2
+  characterSpacing: 0
+  characterPadding: 1
+  includeFontData: 1
+  fontName: Hanken
+  fontNames:
+  - Hanken
+  fallbackFontReferences:
+  - {fileID: 12800000, guid: 05f4eb5689b29034cab92cd3e1adf2e7, type: 3}
+  customCharacters: 
+  fontRenderingMode: 0
+  ascentCalculationMode: 1
+  useLegacyBoundsCalculation: 0
+  shouldRoundAdvanceValue: 1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

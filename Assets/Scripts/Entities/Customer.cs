@@ -4,52 +4,61 @@ using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.UI;
 
-public class Customer : MonoBehaviour {
+public class Customer : MonoBehaviour, ISelectable {
 
     public float startingHappiness = 60;
-    public float baseVisitChance = 0.8f;
+    //public float baseVisitChance = 0.8f;
     public float[] actionWeight = new float[] { 8, 2, 0 };
-    public Text debugText;
 
     [Header("Internal")]
     public float lookAngleBuffer = 0.25f;
-    public float lookTime = 4, complainTime = 20, wanderTime = 10;
+    public float lookTime = 4, wanderTime = 10;
     public Material outlineMaterial;
 
     public float Happiness { get; private set; }
     public GameType GameDemand { get; private set; }
 
     internal string custName;
-    internal float CurrentProgressTime { get { return t; } }
+    internal float CurrentProgressTime { get; private set; }
     internal float MaxProgressTime
     {
         get
         {
-            if (actionId == 0) return lookTime;
+            if (actionId == 0)
+            {
+                if (step == 0) return lookTime;
+                else
+                {
+                    Cashier cashier = GameManager.GetDeptScript(Departments.Cashier) as Cashier;
+                    return cashier.ServeSpeed;
+                }
+            }
             else if (actionId == 1) return wanderTime;
-            else if (actionId == 2) return complainTime;
+            else if (actionId == 2)
+            {
+                CustomerService customer = GameManager.GetDeptScript(Departments.CustService) as CustomerService;
+                return customer.ServeSpeed;
+            }
             else return 0;
         }
     }
     internal string CurrentActionName { get { return actions[actionId]; } }
-    internal int CustomerID { get { return cId; } }
-    
+    internal int Visits { get; private set; }
 
-    float prog = 0;
+    internal float TotalSpendings { get; private set; }
+    internal int CustomerID { get; private set; } = -1;
+    
     bool finished = false, isInActivity = false;
     NavMeshAgent agent;
-    NavMeshObstacle obs;
-    Material origMat;
-    int actionId = -1, cId = -1;
-    float t;
+    readonly Material origMat;
+    int actionId = -1, step = 0;
     Vector3 startPos;
     float origSpd;
-    Dictionary<int, string> actions = new Dictionary<int, string>()
+    private readonly Dictionary<int, string> actions = new Dictionary<int, string>()
     {
         {-1, "Leaving" }, {0, "Shopping" }, {1, "Looking Around" }, {2, "Complaining" }
     };
-
-
+    
     public void CommitTransaction(bool success, float amt = 5)
     {
         finished = true;
@@ -60,9 +69,8 @@ public class Customer : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
 
-        cId = GameManager.RequestID();
+        CustomerID = GameManager.RequestID();
         agent = GetComponent<NavMeshAgent>();
-        obs = GetComponent<NavMeshObstacle>();
         origSpd = agent.speed;
         Happiness = startingHappiness;
         //What will this character do?
@@ -71,22 +79,30 @@ public class Customer : MonoBehaviour {
 
     public void ChooseAction()
     {
+        Visits++;
         agent.speed = origSpd;
         GetComponent<MeshRenderer>().material.color = Color.white;
         finished = false;
         startPos = transform.position;
-        if (MathRand.WeightedPick(actionWeight) == 0)
+
+        float[] weight = new float[] {
+            GameManager.IsDepartmentFunctional(Departments.Cashier) ? actionWeight[0] : 0,
+            GameManager.IsDepartmentFunctional(Departments.CustService) ? actionWeight[1] : 0,
+            actionWeight[2]
+        };
+
+        if (MathRand.WeightedPick(weight) == 0)
         {
             GameDemand = (GameType)MarketManager.GetDemands();
             StartCoroutine(GoShopping());
             //Shopping
         }
-        else if (MathRand.WeightedPick(actionWeight) == 1)
+        else if (MathRand.WeightedPick(weight) == 1)
         {
             StartCoroutine(GoWander());
             //Wander
         }
-        else if (MathRand.WeightedPick(actionWeight) == 2 && GameManager.IsDepartmentExists(Departments.CustService))
+        else if (MathRand.WeightedPick(weight) == 2 && GameManager.IsDepartmentFunctional(Departments.CustService))
         {
             
             StartCoroutine(GoComplain()); //Complain
@@ -97,50 +113,45 @@ public class Customer : MonoBehaviour {
 	// Update is called once per frame
 	void Update () {
         if (!finished && actionId == 0) Happiness -= Time.deltaTime / 6;
-        string action = actionId > 0 ? "Wander" : actionId == 0 ? "Shop" : "Leaving";
         //var dest = new Vector3(agent.destination.x, transform.position.y, agent.destination.z);
-        debugText.text = string.Format("({3}) {0:N1}%\n{1} {2}", Happiness, action, actionId == 0 ? MarketManager.GetGameNames(GameDemand) : "", cId);
 
         if (actionId == 1)
         {
-            t += Time.deltaTime;
-            if (t >= wanderTime)
+            CurrentProgressTime += Time.deltaTime;
+            if (CurrentProgressTime >= wanderTime)
             {
                 StopAllCoroutines();
                 StartCoroutine(LeaveBusiness());
-                t = 0;
+                CurrentProgressTime = 0;
 
             }
-        } else if(actionId == 0) {
-            if (isInActivity) t += Time.deltaTime;
-            else t = 0;
-            if (t > lookTime) t = lookTime;
-            
-        } else if (actionId == 2)
-        {
-            if (isInActivity) t += Time.deltaTime;
-            else t = 0;
-            if (t > complainTime) t = complainTime;
         }
+        else if(actionId == 0) {
+            if (isInActivity) CurrentProgressTime += Time.deltaTime;
+            else CurrentProgressTime = 0;
+        }
+        else if (actionId == 2)
+        {
+            if (isInActivity) CurrentProgressTime += Time.deltaTime;
+            else CurrentProgressTime = 0;
+        }
+        if (CurrentProgressTime > MaxProgressTime) CurrentProgressTime = MaxProgressTime;
 	}
 
-    internal void Select()
+    public void Select()
     {
-        MeshRenderer mr = GetComponent<MeshRenderer>();
-        if(origMat == null) origMat = mr.material;
-        mr.material = outlineMaterial;
+
     }
 
-    internal void Deselect()
+    public void Deselect()
     {
-        MeshRenderer mr = GetComponent<MeshRenderer>();
-        mr.material = origMat;
+
     }
 
     IEnumerator GoShopping()
     {
         actionId = 0;
-
+        step = 0;
         //Move to interact point of the Showcase. TODO: Choose interact point
         agent.SetDestination(GameManager.GetInteractable(Departments.Showcase).position);
         yield return new WaitUntil(() => {
@@ -167,7 +178,9 @@ public class Customer : MonoBehaviour {
             yield break;
         }
 
+        step++;
         //Move character. TODO: Choose interact point
+        Cashier cashier = GameManager.GetDeptScript(Departments.Cashier) as Cashier;
         agent.SetDestination(GameManager.GetInteractable(Departments.Cashier).position);
         yield return new WaitUntil(() => {
             return CheckDistance(agent.destination);
@@ -181,12 +194,13 @@ public class Customer : MonoBehaviour {
         SetObstruction(true);
         isInActivity = true;
         //Wait to visualize look. Animate
-        yield return new WaitForSeconds(lookTime);
+        yield return new WaitForSeconds(cashier.ServeSpeed);
+        
+        //Do transaction, then wait as visualization
+        TotalSpendings += GameManager.CommitTransaction(this, GameDemand);
+        yield return new WaitForSeconds(1.5f);
 
         isInActivity = false;
-        //Do transaction, then wait as visualization
-        GameManager.CommitTransaction(this, GameDemand);
-        yield return new WaitForSeconds(1.5f);
 
         SetObstruction(false);
         //Move out from the shop.
@@ -198,25 +212,35 @@ public class Customer : MonoBehaviour {
         actionId = 1;
         agent.speed *= 0.75f;
 
-        while (t < wanderTime)
+        while (CurrentProgressTime < wanderTime)
         {
-            //Move to wander point
-            agent.SetDestination(GameManager.GetWander().position);
+            //try
+            //{
+                //Move to wander point
+                agent.SetDestination(GameManager.GetWander().position);
+            //}
+            //catch (System.Exception)
+            //{
+            //    Visits--;
+            //    StartCoroutine(LeaveBusiness());
+            //}
+
             yield return new WaitUntil(() =>
             {
-                return CheckDistance(agent.destination) || t >= wanderTime;
+                return CheckDistance(agent.destination) || CurrentProgressTime >= wanderTime;
             });
 
             //Look at random direction
             Vector3 dir = new Vector3(transform.position.x + Random.Range(-10, 10), transform.position.y, transform.position.z + Random.Range(-10, 10));
             yield return new WaitUntil(() =>
             {
-                return RotateTowards(dir) < lookAngleBuffer || t >= wanderTime;
+                return RotateTowards(dir) < lookAngleBuffer || CurrentProgressTime >= wanderTime;
             });
             SetObstruction(true);
             //Wait arbitrarily
             yield return new WaitForSeconds(Random.Range(1f, lookTime));
             SetObstruction(false);
+
         }
     }
 
@@ -235,10 +259,12 @@ public class Customer : MonoBehaviour {
             return RotateTowards(GameManager.GetDeptObject(Departments.CustService).transform.position) < lookAngleBuffer;
         });
 
+        CustomerService cust = GameManager.GetDeptScript(Departments.CustService) as CustomerService;
+
         SetObstruction(true);
         isInActivity = true;
         //Wait to visualize look. Animate
-        yield return new WaitForSeconds(complainTime);
+        yield return new WaitForSeconds(cust.ServeSpeed);
         isInActivity = false;
 
         CommitTransaction(true, 16);
