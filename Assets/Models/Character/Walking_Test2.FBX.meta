@@ -1,0 +1,220 @@
+fileFormatVersion: 2
+guid: 8f9216bf100969d41ad9718cca943aa8
+ModelImporter:
+  serializedVersion: 22
+  fileIDToRecycleName:
+    100000: Body
+    100002: Bone_Body
+    100004: Bone_Butt
+    100006: Bone_Head
+    100008: Bone_L_Arm1
+    100010: Bone_L_Arm2
+    100012: Bone_L_Foot
+    100014: Bone_L_Hand
+    100016: Bone_R_Arm1
+    100018: Bone_R_Arm2
+    100020: Bone_R_Foot
+    100022: Bone_R_Hand
+    100024: Ctrl_Body
+    100026: Ctrl_Head
+    100028: Ctrl_L_Arm
+    100030: Ctrl_L_Foot
+    100032: Ctrl_L_Hand
+    100034: Ctrl_R_Arm
+    100036: Ctrl_R_Foot
+    100038: Ctrl_R_Hand
+    100040: Ctrl_R_Hand001
+    100042: Ctrl_R_Hand002
+    100044: Ctrl_Root
+    100046: idunglp
+    100048: KAKI_LP
+    100050: KEPALAUVW_LP
+    100052: RAMBUT_LP
+    100054: //RootNode
+    400000: Body
+    400002: Bone_Body
+    400004: Bone_Butt
+    400006: Bone_Head
+    400008: Bone_L_Arm1
+    400010: Bone_L_Arm2
+    400012: Bone_L_Foot
+    400014: Bone_L_Hand
+    400016: Bone_R_Arm1
+    400018: Bone_R_Arm2
+    400020: Bone_R_Foot
+    400022: Bone_R_Hand
+    400024: Ctrl_Body
+    400026: Ctrl_Head
+    400028: Ctrl_L_Arm
+    400030: Ctrl_L_Foot
+    400032: Ctrl_L_Hand
+    400034: Ctrl_R_Arm
+    400036: Ctrl_R_Foot
+    400038: Ctrl_R_Hand
+    400040: Ctrl_R_Hand001
+    400042: Ctrl_R_Hand002
+    400044: Ctrl_Root
+    400046: idunglp
+    400048: KAKI_LP
+    400050: KEPALAUVW_LP
+    400052: RAMBUT_LP
+    400054: //RootNode
+    2100000: Rambut
+    2100002: Hidung
+    2100004: Badan
+    2100006: Muka
+    2100008: Sepatu
+    2300000: Body
+    2300002: idunglp
+    2300004: RAMBUT_LP
+    3300000: Body
+    3300002: idunglp
+    3300004: RAMBUT_LP
+    4300000: RAMBUT_LP
+    4300002: idunglp
+    4300004: Body
+    4300006: KEPALAUVW_LP
+    4300008: KAKI_LP
+    7400000: Walking
+    9500000: //RootNode
+    13700000: KAKI_LP
+    13700002: KEPALAUVW_LP
+  externalObjects:
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Badan_Base_Color
+    second: {fileID: 2800000, guid: e84e0c752dc4dd4428de8d027019d653, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Hidung_Base_Color
+    second: {fileID: 2800000, guid: 0b7b4c291c6b8aa45b7ccbf15d6b6a08, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Muka_Base_Color
+    second: {fileID: 2800000, guid: e61f8b3839d826a46b075df4853a5711, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Rambut_Base_Color
+    second: {fileID: 2800000, guid: 482ca6997e4857a4d95fc16050d9feec, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Rambut_Normal_DirectX
+    second: {fileID: 2800000, guid: 8f9a18799ca07a248bf0e842f98506cd, type: 3}
+  - first:
+      type: UnityEngine:Texture2D
+      assembly: UnityEngine.CoreModule
+      name: Sepatu_Base_Color
+    second: {fileID: 2800000, guid: 1571cf0bb6654a9429d7428d320c4bca, type: 3}
+  materials:
+    importMaterials: 1
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    motionNodeName: 
+    rigImportErrors: 
+    rigImportWarnings: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations:
+    - serializedVersion: 16
+      name: Walking
+      takeName: Take 001
+      firstFrame: 10
+      lastFrame: 90
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 0
+      loopBlend: 0
+      loopBlendOrientation: 0
+      loopBlendPositionY: 0
+      loopBlendPositionXZ: 0
+      keepOriginalOrientation: 0
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 0
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    isReadable: 1
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    importVisibility: 1
+    importBlendShapes: 1
+    importCameras: 1
+    importLights: 1
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    optimizeMeshForGPU: 1
+    keepQuads: 0
+    weldVertices: 1
+    preserveHierarchy: 0
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+    normalCalculationMode: 4
+  importAnimation: 1
+  copyAvatar: 0
+  humanDescription:
+    serializedVersion: 2
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    rootMotionBoneName: 
+    rootMotionBoneRotation: {x: 0, y: 0, z: 0, w: 1}
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  animationType: 2
+  humanoidOversampling: 1
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
