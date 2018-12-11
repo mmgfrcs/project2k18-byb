@@ -138,14 +138,14 @@ public class Customer : MonoBehaviour, ISelectable {
         if (CurrentProgressTime > MaxProgressTime) CurrentProgressTime = MaxProgressTime;
 	}
 
-    public void Select()
-    {
-
-    }
-
     public void Deselect()
     {
+        GetComponent<Outline>().enabled = false;
+    }
 
+    public void Select()
+    {
+        GetComponent<Outline>().enabled = true;
     }
 
     IEnumerator GoShopping()

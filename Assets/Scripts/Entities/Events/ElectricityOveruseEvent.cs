@@ -12,4 +12,9 @@ public class ElectricityOveruseEvent : GameEventSystems.Event {
         List<DepartmentBase> deptList = GameManager.GetAllDeptScripts();
         foreach (var dept in deptList) dept.AdjustTrust(-10);
     }
+
+    public override void EndRun()
+    {
+        toEnd = true;
+    }
 }

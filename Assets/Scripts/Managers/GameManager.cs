@@ -30,6 +30,7 @@ public class GameManager : MonoBehaviour {
     public Transform[] startPos;
     public Transform[] wanderPos;
     public GameObject[] customerObjects;
+    public List<GameObject> deptObjects;
     public StatusTabPanel[] statusTabDepts;
     public StockTabPanel stockTab;
     public Transform cameraPivot;
@@ -59,12 +60,13 @@ public class GameManager : MonoBehaviour {
     public Animator statusAnimator;
     public Animator stockAnimator, pausePanelAnim, gameFaderAnim;
     
+    internal static float NetCustomerSpawnTime { get { return instance.customerSpawnTime / Mathf.Max(VisitChance, 0.001f); } }
     internal static float VisitChance { get { return instance.baseVisitChance + instance.visitChanceMod; } }
     internal static float Cash { get; set; }
     internal static int Days { get; private set; }
     internal static int CompanyLevel { get; private set; }
     internal static float CurrentXP { get; private set; }
-    internal static bool isInDemoMode { get { return instance.mainMenuMode; } }
+    internal static bool isInDemoMode { get { return instance != null ? instance.mainMenuMode : false; } }
     internal static float NextXP { get {
             if (_xp.Length > CompanyLevel) return _xp[_xp.Length - 1] + _nxp * (CompanyLevel - _xp.Length);
             else return _xp[CompanyLevel];
@@ -111,7 +113,7 @@ public class GameManager : MonoBehaviour {
 
             _xp = baseXPPerLevel;
             _nxp = nextXPPerLevel;
-            CompanyLevel = 1;
+            CompanyLevel = 2;
 
             EndDayManager.AddExpense(ExpenseType.Maintenance, Departments.Start, maintenanceCost);
 
@@ -130,7 +132,7 @@ public class GameManager : MonoBehaviour {
             TouchKit.addGestureRecognizer(pr);
 
             DaytimeManager.OnDayEnd += DaytimeManager_OnDayEnd;
-
+            EventManager.RunStartEvent();
             selectedHireText = selectHireBtn.GetComponentInChildren<Text>();
 
             gameFaderAnim.Play("FadeOut");
@@ -146,7 +148,7 @@ public class GameManager : MonoBehaviour {
         }
 
         if(canSpawnCustomer && !isSpawning) t += Time.deltaTime;
-        if (t >= customerSpawnTime && canSpawnCustomer)
+        if (t >= NetCustomerSpawnTime && canSpawnCustomer)
         {
             t = 0;
             isSpawning = true;
@@ -452,6 +454,65 @@ public class GameManager : MonoBehaviour {
         Cash -= entry.itemPrice;
 
         //switch-case Item ID
+        switch (entry.itemId)
+        {
+            case 0:
+                {
+                    //Cashier Lv 2
+                    break;
+                }
+            case 1:
+                {
+                    //Customer Service
+                    instance.deptObjects.Find(x => x.GetComponent<CustomerService>() != null).SetActive(true);
+                    break;
+                }
+            case 2:
+                {
+                    //RnD
+                    instance.deptObjects.Find(x => x.GetComponent<ResearchDevelopment>() != null).SetActive(true);
+                    break;
+                }
+            case 3:
+                {
+                    //Cashier Lv 3
+                    break;
+                }
+            case 4:
+                {
+                    //Marketing
+                    instance.deptObjects.Find(x => x.GetComponent<Marketing>() != null).SetActive(true);
+                    break;
+                }
+            case 5:
+                {
+                    //Finance
+                    instance.deptObjects.Find(x => x.GetComponent<Finance>() != null).SetActive(true);
+                    break;
+                }
+            case 6:
+                {
+                    //Cashier Lv 4
+                    break;
+                }
+            case 7:
+                {
+                    //HRD
+                    instance.deptObjects.Find(x => x.GetComponent<HumanResource>() != null).SetActive(true);
+                    break;
+                }
+            case 8:
+                {
+                    //Forecaster
+                    instance.deptObjects.Find(x => x.GetComponent<Forecaster>() != null).SetActive(true);
+                    break;
+                }
+            case 9:
+                {
+                    //Saving Grace
+                    break;
+                }
+        }
     }
 
     public static void RegisterDepartment(Departments dept, DepartmentBase deptScript)

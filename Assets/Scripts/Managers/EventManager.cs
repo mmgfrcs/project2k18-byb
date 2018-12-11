@@ -5,10 +5,14 @@ using UnityEngine;
 public class EventManager : MonoBehaviour {
     public EventPanel panel;
 
+    [Header("Clear Event")]
     public string clearEventTitle;
     [TextArea(10, 15)]
     public string clearEventDescription;
-    
+
+    [Header("Start Event")]
+    public GameEventSystems.Event startEvent;
+
     static EventManager instance;
     List<GameEventSystems.Event> events;
     GameEventSystems.Event eventToRun;
@@ -31,6 +35,14 @@ public class EventManager : MonoBehaviour {
 	void Update () {
 		
 	}
+
+    internal static void RunStartEvent()
+    {
+        instance.panel.eventTitle.text = instance.startEvent.eventName;
+        instance.panel.eventDesc.text = instance.startEvent.eventDescription;
+        instance.startEvent.Run();
+        instance.panel.gameObject.SetActive(true);
+    }
 
     internal static void RunEvent()
     {
@@ -70,6 +82,18 @@ public class EventManager : MonoBehaviour {
     {
         foreach (var ev in instance.events)
         {
+            if (ev.guaranteed && ev.guaranteeOnDay == GameManager.Days)
+            {
+                instance.eventToRun = ev;
+                instance.clearEvent = false;
+                Debug.Log("EventManager - Guaranteed Event " + ev.eventName + " on Day " + GameManager.Days);
+                return ev;
+            }
+        }
+
+        foreach (var ev in instance.events)
+        {
+            if (ev == instance.startEvent) continue;
             if (MathRand.WeightedPick(new float[] { ev.chance, 1 - ev.chance }) == 0)
             {
                 instance.eventToRun = ev;

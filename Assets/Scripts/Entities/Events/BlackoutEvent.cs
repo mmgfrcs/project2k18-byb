@@ -14,5 +14,6 @@ public class BlackoutEvent : GameEventSystems.Event
     public override void EndRun()
     {
         GameManager.SetVisitChanceMod(-visitMod, true);
+        toEnd = true;
     }
 }

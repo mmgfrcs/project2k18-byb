@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class DepartmentBase : MonoBehaviour, ISelectable {
+public abstract class DepartmentBase : MonoBehaviour, ISelectable {
     
     public Transform[] interactablePosition;
     public Transform lookDirection;
@@ -38,14 +38,19 @@ public class DepartmentBase : MonoBehaviour, ISelectable {
     public float StaffHireCost { get { return CurrentTrust >= 20 ? hireCost : hireCost * 2; } }
     public float ManagerHireCost { get { return CurrentTrust >= 20 ? managerHireCost : managerHireCost * 2; } }
 
+    public virtual void OnUpgrade()
+    {
+
+    }
+
     public virtual void Deselect()
     {
-        
+        GetComponent<Outline>().enabled = false;
     }
 
     public virtual void Select()
     {
-        
+        GetComponent<Outline>().enabled = true;
     }
 
     // Use this for initialization

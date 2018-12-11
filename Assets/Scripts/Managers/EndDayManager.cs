@@ -57,6 +57,7 @@ public class EndDayManager : MonoBehaviour {
 
     [Header("UI - Shop")]
     public GameObject shopSection;
+    public ShopEntry[] shopRows;
 
     [Header("UI - Special ABilities")]
     public GameObject abilitiesSection;
@@ -405,6 +406,15 @@ public class EndDayManager : MonoBehaviour {
 
         PopulateExpense();
     }
+
+    void PopulateShop()
+    {
+        foreach(var ent in shopRows)
+        {
+            if(ent.ItemBought || GameManager.CompanyLevel < ent.requiredLevel) ent.gameObject.SetActive(false);
+            else ent.gameObject.SetActive(true);
+        }
+    }
     
     //Finance Report
     public void ChangePage(int page)
@@ -484,6 +494,7 @@ public class EndDayManager : MonoBehaviour {
                 }
             case 8:
                 {
+                    PopulateShop();
                     shopSection.SetActive(true);
                     break;
                 }
@@ -707,7 +718,7 @@ public class EndDayManager : MonoBehaviour {
         if (GameManager.IsDepartmentFunctional(Departments.HRD)) instance.categoryButtons[9].interactable = true;
         else instance.categoryButtons[9].interactable = false;
         //Shop
-        instance.categoryButtons[8].interactable = false; 
+        //instance.categoryButtons[8].interactable = false; 
         instance.categoryButtons[0].isOn = true;
         instance.ChangePage(0);
 

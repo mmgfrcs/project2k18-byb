@@ -19,6 +19,12 @@ public class Cashier : DepartmentBase {
     {
         UpdateSalary(Departments.Cashier);
     }
+
+    public override void OnUpgrade()
+    {
+        base.OnUpgrade();
+        
+    }
     // Update is called once per frame
 
 }
