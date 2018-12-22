@@ -16,4 +16,6 @@ public class HumanResource : DepartmentBase {
     {
         UpdateSalary(Departments.HRD);
     }
+
+
 }

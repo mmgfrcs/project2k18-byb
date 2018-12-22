@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class ResearchDevelopment : DepartmentBase {
+
     protected override void Start()
     {
         base.Start();

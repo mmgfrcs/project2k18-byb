@@ -4,6 +4,7 @@ using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 
 public enum Departments
 {
@@ -62,6 +63,7 @@ public class GameManager : MonoBehaviour {
     
     internal static float NetCustomerSpawnTime { get { return instance.customerSpawnTime / Mathf.Max(VisitChance, 0.001f); } }
     internal static float VisitChance { get { return instance.baseVisitChance + instance.visitChanceMod; } }
+    internal static float BaseVisitChance { get { return instance.baseVisitChance; } }
     internal static float Cash { get; set; }
     internal static int Days { get; private set; }
     internal static int CompanyLevel { get; private set; }
@@ -113,7 +115,7 @@ public class GameManager : MonoBehaviour {
 
             _xp = baseXPPerLevel;
             _nxp = nextXPPerLevel;
-            CompanyLevel = 2;
+            CompanyLevel = 1;
 
             EndDayManager.AddExpense(ExpenseType.Maintenance, Departments.Start, maintenanceCost);
 
@@ -288,22 +290,19 @@ public class GameManager : MonoBehaviour {
     {
         while (true)
         {
-            if (MathRand.WeightedPick(new float[] { Mathf.Max(0, (1 - VisitChance) * 100), Mathf.Min(100, VisitChance * 100) }) == 1 || mainMenuMode)
+            yield return new WaitForSeconds(NetCustomerSpawnTime + Random.Range(NetCustomerSpawnTime * -0.1f, NetCustomerSpawnTime * 0.1f));
+            Transform start = MathRand.Pick(startPos);
+            int choice = MathRand.WeightedPick(new float[] { recurringCust.Count, newCustomerRatio });
+            if (choice == 1)
             {
-                Transform start = MathRand.Pick(startPos);
-                int choice = MathRand.WeightedPick(new float[] { recurringCust.Count, newCustomerRatio });
-                if (choice == 1)
-                {
-                    Customer c = Instantiate(MathRand.Pick(customerObjects), start.position, start.rotation).GetComponent<Customer>();
-                    if (mainMenuMode) c.actionWeight = new float[] { 3, 6, 1 };
-                    c.custName = AssignCustomerName();
-                }
-                else CustomerReturn(MathRand.Pick(recurringCust)); //else we return it
-                isSpawning = false;
-                custCount++;
-                break;
+                Customer c = Instantiate(MathRand.Pick(customerObjects), start.position, start.rotation).GetComponent<Customer>();
+                if (mainMenuMode) c.actionWeight = new float[] { 3, 6, 1 };
+                c.custName = AssignCustomerName();
             }
-            else yield return new WaitForSeconds(1);
+            else CustomerReturn(MathRand.Pick(recurringCust)); //else we return it
+            isSpawning = false;
+            custCount++;
+            break;
         }
     }
 
@@ -342,7 +341,8 @@ public class GameManager : MonoBehaviour {
 
     public void ExitGame()
     {
-
+        LoadingScreenManager.nextSceneName = "Menu";
+        StartCoroutine(WaitExitAnim());
     }
 
     public void SaveGameState()
@@ -427,6 +427,13 @@ public class GameManager : MonoBehaviour {
         }
     }
 
+    IEnumerator WaitExitAnim()
+    {
+        gameFaderAnim.Play("FadeIn");
+        yield return new WaitForSeconds(1f);
+        SceneManager.LoadScene("Loading");
+    }
+
     bool IsInfoPanelClosed()
     {
         return selectStatusAnim.GetCurrentAnimatorStateInfo(0).IsName("Closed") || selectStatusAnim.GetCurrentAnimatorStateInfo(0).IsName("Close");
@@ -457,8 +464,10 @@ public class GameManager : MonoBehaviour {
         switch (entry.itemId)
         {
             case 0:
+            case 3:
+            case 6:
                 {
-                    //Cashier Lv 2
+                    instance.deptObjects.Find(x => x.GetComponent<Cashier>() != null).GetComponent<Cashier>().OnUpgrade();
                     break;
                 }
             case 1:
@@ -473,11 +482,6 @@ public class GameManager : MonoBehaviour {
                     instance.deptObjects.Find(x => x.GetComponent<ResearchDevelopment>() != null).SetActive(true);
                     break;
                 }
-            case 3:
-                {
-                    //Cashier Lv 3
-                    break;
-                }
             case 4:
                 {
                     //Marketing
@@ -488,11 +492,6 @@ public class GameManager : MonoBehaviour {
                 {
                     //Finance
                     instance.deptObjects.Find(x => x.GetComponent<Finance>() != null).SetActive(true);
-                    break;
-                }
-            case 6:
-                {
-                    //Cashier Lv 4
                     break;
                 }
             case 7:
@@ -588,7 +587,7 @@ public class GameManager : MonoBehaviour {
 
         if (!instance.intr.ContainsKey(dept)) instance.intr.Add(dept, new List<Transform>());
 
-        if(instance.intr[dept].Count == 0) instance.intr[dept].AddRange(MathRand.ChooseSetDependent(depts[dept].interactablePosition, depts[dept].interactablePosition.Length));
+        if(instance.intr[dept].Count == 0) instance.intr[dept].AddRange(MathRand.ChooseSetDependent(depts[dept].interactablePosition.ToArray(), depts[dept].interactablePosition.Count));
         
         var interact = instance.intr[dept][0];
         instance.intr[dept].RemoveAt(0);

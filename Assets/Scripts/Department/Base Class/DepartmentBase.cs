@@ -4,18 +4,20 @@ using UnityEngine;
 
 public abstract class DepartmentBase : MonoBehaviour, ISelectable {
     
-    public Transform[] interactablePosition;
+    public List<Transform> interactablePosition;
     public Transform lookDirection;
     public int maxStaff = 1, startingStaff = 1;
     public float salary, hireCost, managerHireCost;
     public float minimumStaffRatio = 0.2f;
     public float fullSpeedStaffRatio = 0.8f;
     
-    protected float trustDrainRate = 0.02f;
+    protected float trustDrainRate = 0f;
     
     internal string departmentName, overtimeEffect;
-
+    internal List<SpecialAbility> abilities = new List<SpecialAbility>();
+    
     internal bool Overtime { get; set; } = false;
+    public int UpgradeLevel { get; protected set; } = 1;
     public int CurrentStaff { get; protected set; } = 1;
     public int MaximumStaff { get; protected set; } = 1;
     public float CurrentTrust { get; protected set; } = 60;
@@ -40,7 +42,7 @@ public abstract class DepartmentBase : MonoBehaviour, ISelectable {
 
     public virtual void OnUpgrade()
     {
-
+        UpgradeLevel++;
     }
 
     public virtual void Deselect()
@@ -60,6 +62,35 @@ public abstract class DepartmentBase : MonoBehaviour, ISelectable {
         MaximumStaff = maxStaff;
 	}
 
+    protected virtual void AddAbility(SpecialAbility ability)
+    {
+        if (abilities.Count >= 2) abilities.RemoveAt(0);
+        abilities.Add(ability);
+    }
+
+    protected virtual void OnSpecialAbilityEffect()
+    {
+        trustDrainRate = 0;
+        WorkSpeedMod = 0;
+        foreach(var ability in abilities)
+        {
+            switch (ability.abilityId)
+            {
+                case 0:
+                    {
+                        trustDrainRate = 1f / 60;
+                        break;
+                    }
+                case 1:
+                    {
+                        WorkSpeedMod = 0.5f;
+
+                        break;
+                    }
+            }
+        }
+    }
+
     protected virtual void OnOvertime()
     {
 
@@ -67,7 +98,7 @@ public abstract class DepartmentBase : MonoBehaviour, ISelectable {
 
     // Update is called once per frame
     protected virtual void Update () {
-        
+        OnSpecialAbilityEffect();
 	}
 
     internal virtual void AdjustTrust(float mod)

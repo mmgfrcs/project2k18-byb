@@ -70,7 +70,7 @@ public class EventManager : MonoBehaviour {
 
     internal static void EndEvent()
     {
-        //TODO Revert event changes
+        //Revert event changes
         if (instance.eventToRun != null)
         {
             instance.eventToRun.EndRun();
@@ -84,6 +84,7 @@ public class EventManager : MonoBehaviour {
         {
             if (ev.guaranteed && ev.guaranteeOnDay == GameManager.Days)
             {
+                ev.guaranteed = false;
                 instance.eventToRun = ev;
                 instance.clearEvent = false;
                 Debug.Log("EventManager - Guaranteed Event " + ev.eventName + " on Day " + GameManager.Days);

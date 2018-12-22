@@ -54,18 +54,26 @@ public class EndDayManager : MonoBehaviour {
 
     [Header("UI - Marketing")]
     public GameObject marketingSection;
+    public Text businessAdType, businessAdCost;
+    public Text newRecurringCustText, totalCostText;
+    public Slider newRecurringCustSlider;
+    public MarketingEntry[] marketingRows;
+    internal int businessAdPos = 0;
 
     [Header("UI - Shop")]
     public GameObject shopSection;
     public ShopEntry[] shopRows;
 
-    [Header("UI - Special ABilities")]
+    [Header("UI - Special Abilities")]
     public GameObject abilitiesSection;
+    public SpecialAbilityOverviewEntry[] abilityOverviewRows;
+    public SpecialAbilityTrainEntry[] abilityTrainRows;
+    public Sprite emptySprite;
 
     static EndDayManager instance;
     public static bool IsPanelOpen { get; private set; }
-    int mode = 0;
-    int toloan = 0;
+    int mode = 0, toloan = 0;
+    float oldMarketingMod = 0, newMarketingMod = 0, pendingMarketingCost;
     
     List<System.Tuple<string, string>> expenseString, expenseByDeptString;
     Dictionary<string, DepartmentBase> overtimeAssociation = new Dictionary<string, DepartmentBase>();
@@ -174,6 +182,41 @@ public class EndDayManager : MonoBehaviour {
             else overtimeRows[i].gameObject.SetActive(false);
 
             db = null;
+        }
+    }
+
+    void InitializeSpecialAbilities()
+    {
+        for (int i = 0; i < abilityOverviewRows.Length; i++) {
+            if (GameManager.IsDepartmentExists((Departments)(i+2)))
+            {
+                DepartmentBase dept = GameManager.GetDeptScript((Departments)(i+2));
+                abilityOverviewRows[i].deptName.text = dept.departmentName;
+                for(int j = 0; j < abilityOverviewRows[i].abilities.Length; j++)
+                {
+                    if (j >= dept.abilities.Count) abilityOverviewRows[i].abilities[j].sprite = emptySprite;
+                    else abilityOverviewRows[i].abilities[j].sprite = dept.abilities[j].abilityIcon;
+                }
+            }
+            else abilityOverviewRows[i].gameObject.SetActive(false);
+        }
+
+        for(int i = 0; i < abilityTrainRows.Length; i++)
+        {
+            SpecialAbility[] abilities = MarketManager.GetSpecialAbilities();
+            if (i < abilities.Length )//&& abilities[i].AbilityDiscovered && abilities[i].trainable)
+            {
+                abilityTrainRows[i].abilityName.text = abilities[i].abilityName;
+                abilityTrainRows[i].abilityDescription.text = abilities[i].abilityDescription;
+                abilityTrainRows[i].abilityIcons.sprite = abilities[i].abilityIcon;
+                abilityTrainRows[i].abilityTrainProgress.gameObject.SetActive(false);// = abilities[i].abilityName;
+
+                string durationText;
+                if (abilities[i].trainTimeHours <= 12) durationText = string.Format("{0:N0}h", abilities[i].trainTimeHours);
+                else durationText = string.Format("{0:N0}", Mathf.CeilToInt(abilities[i].trainTimeHours / 12f));
+                abilityTrainRows[i].trainDuration.text = durationText;
+            }
+            else abilityTrainRows[i].gameObject.SetActive(false);
         }
     }
 
@@ -337,14 +380,30 @@ public class EndDayManager : MonoBehaviour {
 
     void PopulateForecast()
     {
+        Forecaster forecaster = GameManager.GetDeptScript(Departments.Forecaster) as Forecaster;
         for (int i = 0; i < pricesRows.Length; i++)
         {
             if (MarketManager.IsGameAvailable(i))
             {
                 forecastRows[i].gameObject.SetActive(true);
                 forecastRows[i].gameTitle.text = MarketManager.GetGameNames((GameType)i);
-                forecastRows[i].nextDayForecast.text = "Dummy " + i;
-                forecastRows[i].nextWeekForecast.text = "Dota 2 7." + i;
+                forecastRows[i].nextDayForecast.text = string.Format("{0:N0} ~ {1:N0}%", 
+                    Mathf.Round(MarketManager.GetSpecificDemandWeight(i, GameManager.Days) * forecaster.ForecastMinFactor * 10) * 10,
+                    Mathf.Round(MarketManager.GetSpecificDemandWeight(i, GameManager.Days) * forecaster.ForecastMaxFactor * 10) * 10);
+
+                forecastRows[i].nextWeekForecast.text = string.Format("{0:N0} ~ {1:N0}%",
+                    Mathf.Round(MarketManager.GetSpecificDemandWeight(i, GameManager.Days + 7) * forecaster.ForecastMinFactor * 10) * 10,
+                    Mathf.Round(MarketManager.GetSpecificDemandWeight(i, GameManager.Days + 7) * forecaster.ForecastMaxFactor * 10) * 10);
+
+                float weight = 0;
+                for(int j = GameManager.Days; j < GameManager.Days + 7; j++)
+                {
+                    weight += MarketManager.GetSpecificDemandWeight(i, j);
+                }
+                weight /= 7;
+                forecastRows[i].weekAvgForecast.text = string.Format("{0:N0} ~ {1:N0}%",
+                    Mathf.Round(weight * forecaster.ForecastMinFactor * 10) * 10,
+                    Mathf.Round(weight * forecaster.ForecastMaxFactor * 10) * 10);
                 
             }
             else
@@ -387,6 +446,61 @@ public class EndDayManager : MonoBehaviour {
         if(tCount == 0) foreach (var rows in loanRows) rows.amountLbl.transform.parent.GetComponent<Toggle>().interactable = true;
         else foreach (var rows in loanRows) rows.amountLbl.transform.parent.GetComponent<Toggle>().interactable = false;
     }
+    
+    #region Marketing Button Action
+    public void OnBusinessAdNext()
+    {
+        businessAdPos++;
+        UpdateMarketingUI();
+    }
+
+    public void OnBusinessAdPrev()
+    {
+        businessAdPos--;
+        UpdateMarketingUI();
+    }
+
+    public void OnGameAdNext(int id)
+    {
+        marketingRows[id].pos++;
+        UpdateMarketingUI();
+    }
+
+    public void OnGameAdPrev(int id)
+    {
+        marketingRows[id].pos--;
+        UpdateMarketingUI();
+    }
+
+    public void OnCustomerRatioChange(float val)
+    {
+        newMarketingMod = val;
+        UpdateMarketingUI();
+    }
+
+    void UpdateMarketingUI()
+    {
+        int i = 0;
+        pendingMarketingCost = 0;
+        foreach(var entry in marketingRows)
+        {
+            entry.gameTitle.text = MarketManager.GetGameNames(i++);
+            entry.adType.text = MarketManager.GetGameAdName(Mathf.Abs(entry.pos) % 5);
+            pendingMarketingCost += MarketManager.GetGameAdPrice(Mathf.Abs(entry.pos) % 5);
+        }
+        businessAdType.text = MarketManager.GetBusinessAdName(Mathf.Abs(businessAdPos) % 5);
+        businessAdCost.text = string.Format("${0:N0}", MarketManager.GetBusinessAdPrice(Mathf.Abs(businessAdPos) % 5));
+        pendingMarketingCost += MarketManager.GetBusinessAdPrice(Mathf.Abs(businessAdPos) % 5);
+
+        newRecurringCustSlider.minValue = GameManager.BaseVisitChance;
+        newRecurringCustSlider.maxValue = GameManager.BaseVisitChance * 1.5f;
+        newRecurringCustText.text = string.Format("{0:N1}%", newRecurringCustSlider.value * 100);
+        float ratio = (newRecurringCustSlider.value - newRecurringCustSlider.minValue) / (newRecurringCustSlider.maxValue - newRecurringCustSlider.minValue);
+        pendingMarketingCost += ratio * 500;
+
+        totalCostText.text = string.Format("${0:N0}", pendingMarketingCost);
+    }
+    #endregion
 
     void PayExpenses()
     {
@@ -490,6 +604,7 @@ public class EndDayManager : MonoBehaviour {
             case 7:
                 {
                     marketingSection.SetActive(true);
+                    UpdateMarketingUI();
                     break;
                 }
             case 8:
@@ -501,6 +616,7 @@ public class EndDayManager : MonoBehaviour {
             case 9:
                 {
                     abilitiesSection.SetActive(true);
+                    InitializeSpecialAbilities();
                     break;
                 }
             default:
@@ -690,6 +806,24 @@ public class EndDayManager : MonoBehaviour {
         
     }
 
+    void CheckDepartment()
+    {
+        //Forecast
+        if (GameManager.IsDepartmentFunctional(Departments.Forecaster)) categoryButtons[4].interactable = true;
+        else categoryButtons[4].interactable = false;
+        //Loans
+        if (GameManager.IsDepartmentFunctional(Departments.Finance)) categoryButtons[6].interactable = true;
+        else categoryButtons[6].interactable = false;
+        //Marketing
+        if (GameManager.IsDepartmentFunctional(Departments.Marketing)) instance.categoryButtons[7].interactable = true;
+        else categoryButtons[7].interactable = false;
+        //Special Abilities
+        if (GameManager.IsDepartmentFunctional(Departments.HRD)) categoryButtons[9].interactable = true;
+        else categoryButtons[9].interactable = false;
+        //Shop
+        //instance.categoryButtons[8].interactable = false; 
+    }
+
     public static void ShowEndDayPanel()
     {
         instance.InitializeExpense();
@@ -705,21 +839,8 @@ public class EndDayManager : MonoBehaviour {
         instance.addedStocks = new int[5];
         instance.endDayPanel.SetActive(true);
         instance.categoryButtons[3].interactable = true;
-        //Forecast
-        if (GameManager.IsDepartmentFunctional(Departments.Forecaster)) instance.categoryButtons[4].interactable = true;
-        else instance.categoryButtons[4].interactable = false;
-        //Loans
-        if (GameManager.IsDepartmentFunctional(Departments.Finance)) instance.categoryButtons[6].interactable = true;
-        else instance.categoryButtons[6].interactable = false;
-        //Marketing
-        //if (GameManager.IsDepartmentFunctional(Departments.Marketing)) instance.categoryButtons[7].interactable = true;
-        /*else*/ instance.categoryButtons[7].interactable = false;
-        //Special Abilities
-        if (GameManager.IsDepartmentFunctional(Departments.HRD)) instance.categoryButtons[9].interactable = true;
-        else instance.categoryButtons[9].interactable = false;
-        //Shop
-        //instance.categoryButtons[8].interactable = false; 
         instance.categoryButtons[0].isOn = true;
+        instance.CheckDepartment();
         instance.ChangePage(0);
 
         instance.nextDayButtonText.text = "Next Day";
