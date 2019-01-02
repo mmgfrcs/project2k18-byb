@@ -21,7 +21,6 @@ public class MarketManager : MonoBehaviour {
     
     LoanData currLoan = null;
     List<AnimationCurve> demands, salePrices, buyPrices;
-    SpecialAbility[] specialAbilities;
     float[] pricesMod = new float[] { 1, 1, 1, 1, 1 };
     int[] adLevel = new int[5];
     Dictionary<GameType, string> gameNames = new Dictionary<GameType, string>()
@@ -39,8 +38,7 @@ public class MarketManager : MonoBehaviour {
         if (instance == null) instance = this;
         else Destroy(this);
 
-        specialAbilities = specialAbilityObject.GetComponents<SpecialAbility>();
-        print("Market Manager - Loaded Special Abilities: " + specialAbilities.Length);
+        GameManager.OnGameEnd += GameManager_OnGameEnd;
         
         demands = new List<AnimationCurve>();
         //Each Game has its own curve, so loop that too
@@ -77,15 +75,16 @@ public class MarketManager : MonoBehaviour {
         }
     }
 
+    private void GameManager_OnGameEnd()
+    {
+        instance = null;
+        GameManager.OnGameEnd -= GameManager_OnGameEnd;
+    }
+
     public static LoanData GetLoanData(int id)
     {
         if (instance.currLoan != null && instance.currLoan.loanName == instance.loans[id].loanName) return instance.currLoan;
         return instance.loans[id];
-    }
-
-    public static SpecialAbility[] GetSpecialAbilities()
-    {
-        return instance.specialAbilities;
     }
 
     public static void StartAbilityTraining(int abilityid)

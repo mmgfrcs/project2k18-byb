@@ -2,16 +2,26 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+public enum EventRunMode
+{
+    Random, Bankruptcy, Defeat, Victory
+}
+
 public class EventManager : MonoBehaviour {
     public EventPanel panel;
+    public BankruptEventPanel bankruptPanel;
+    public VictoryDefeatEventPanel victoryDefeatPanel;
 
     [Header("Clear Event")]
     public string clearEventTitle;
     [TextArea(10, 15)]
     public string clearEventDescription;
 
-    [Header("Start Event")]
+    [Header("Predefined Events")]
     public GameEventSystems.Event startEvent;
+    public GameEventSystems.Event bankruptcyEvent;
+    public GameEventSystems.Event defeatEvent;
+    public GameEventSystems.Event victoryEvent;
 
     static EventManager instance;
     List<GameEventSystems.Event> events;
@@ -29,10 +39,17 @@ public class EventManager : MonoBehaviour {
             events.Add(e);
         }
         Debug.Log("EventManager - Loaded Event: " + events.Count);
+        GameManager.OnGameEnd += GameManager_OnGameEnd;
 	}
-	
-	// Update is called once per frame
-	void Update () {
+
+    private void GameManager_OnGameEnd()
+    {
+        instance = null;
+        GameManager.OnGameEnd -= GameManager_OnGameEnd;
+    }
+
+    // Update is called once per frame
+    void Update () {
 		
 	}
 
@@ -44,27 +61,80 @@ public class EventManager : MonoBehaviour {
         instance.panel.gameObject.SetActive(true);
     }
 
-    internal static void RunEvent()
+    internal static void RunEvent(EventRunMode runMode = EventRunMode.Random)
     {
-        if (instance.eventToRun == null && !instance.clearEvent)
+        if (runMode == EventRunMode.Random)
         {
-            RollEvent();
-            RunEvent();
+            if (instance.eventToRun == null && !instance.clearEvent)
+            {
+                RollEvent();
+                RunEvent();
+            }
+            else if (instance.clearEvent)
+            {
+                //Nothing happening
+                instance.panel.eventTitle.text = instance.clearEventTitle;
+                instance.panel.eventDesc.text = instance.clearEventDescription;
+                instance.panel.gameObject.SetActive(true);
+            }
+            else if (instance.eventToRun != null)
+            {
+                //Run that event
+                instance.panel.eventTitle.text = instance.eventToRun.eventName;
+                instance.panel.eventDesc.text = instance.eventToRun.eventDescription;
+                instance.eventToRun.Run();
+                instance.panel.gameObject.SetActive(true);
+            }
         }
-        else if (instance.clearEvent)
+        else
         {
-            //Nothing happening
-            instance.panel.eventTitle.text = instance.clearEventTitle;
-            instance.panel.eventDesc.text = instance.clearEventDescription;
-            instance.panel.gameObject.SetActive(true);
-        }
-        else if (instance.eventToRun != null)
-        {
-            //Run that event
-            instance.panel.eventTitle.text = instance.eventToRun.eventName;
-            instance.panel.eventDesc.text = instance.eventToRun.eventDescription;
-            instance.eventToRun.Run();
-            instance.panel.gameObject.SetActive(true);
+            EndEvent();
+            if (runMode == EventRunMode.Bankruptcy)
+            {
+                instance.bankruptPanel.eventTitle.text = instance.bankruptcyEvent.eventName;
+                instance.bankruptPanel.eventDesc.text = instance.bankruptcyEvent.eventDescription;
+                instance.bankruptcyEvent.Run();
+                instance.bankruptPanel.gameObject.SetActive(true);
+            }
+            else {
+
+                //Calculate scores
+                float score = 0, victoryScore = 0;
+
+                instance.victoryDefeatPanel.daysValue.text = GameManager.Days.ToString("n0");
+
+                //Scores from Days
+                float dayScore = GameManager.Days * 100;
+                instance.victoryDefeatPanel.daysScore.text = dayScore.ToString("n0");
+                score += dayScore;
+
+                //TODO Scores from Net Worth
+
+                //Scores from Victory, depends on whether the player loses or wins
+                instance.victoryDefeatPanel.victoryValue.text = "x2";
+                if (runMode == EventRunMode.Defeat)
+                {
+                    instance.victoryDefeatPanel.eventTitle.text = instance.defeatEvent.eventName;
+                    instance.victoryDefeatPanel.eventDesc.text = instance.defeatEvent.eventDescription;
+                    instance.victoryDefeatPanel.victoryLine.SetActive(false);
+                    instance.defeatEvent.Run();
+                }
+                if (runMode == EventRunMode.Victory)
+                {
+                    instance.victoryDefeatPanel.eventTitle.text = instance.victoryEvent.eventName;
+                    instance.victoryDefeatPanel.eventDesc.text = instance.victoryEvent.eventDescription;
+                    instance.victoryDefeatPanel.victoryLine.SetActive(true);
+                    instance.victoryEvent.Run();
+                    victoryScore = score * 2;
+                }
+                instance.victoryDefeatPanel.victoryScore.text = victoryScore.ToString("n0");
+                score += victoryScore;
+
+                //Display total score
+                instance.victoryDefeatPanel.totalScore.text = score.ToString("n0");
+
+                instance.victoryDefeatPanel.gameObject.SetActive(true);
+            }
         }
     }
 
@@ -94,7 +164,7 @@ public class EventManager : MonoBehaviour {
 
         foreach (var ev in instance.events)
         {
-            if (ev == instance.startEvent) continue;
+            if (!ev.rollable) continue;
             if (MathRand.WeightedPick(new float[] { ev.chance, 1 - ev.chance }) == 0)
             {
                 instance.eventToRun = ev;
@@ -107,4 +177,6 @@ public class EventManager : MonoBehaviour {
         Debug.Log("EventManager - Rolled Clear event");
         return null;
     }
+
+
 }

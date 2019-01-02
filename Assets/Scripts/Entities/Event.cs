@@ -17,6 +17,7 @@ namespace GameEventSystems
         public int goodWeight;
         [Range(0, 1)]
         public float chance;
+        public bool rollable = true;
 
         [Header("Guaranteed Event")]
         public bool guaranteed;

@@ -8,7 +8,7 @@ using UnityEngine.SceneManagement;
 
 public enum Departments
 {
-    Start, Showcase, Cashier, CustService, Logistics, Marketing, Finance, HRD, Forecaster, Research
+    Start, Showcase, Cashier, CustService, Logistics, Marketing, Finance
 }
 
 public class GameManager : MonoBehaviour {
@@ -32,7 +32,6 @@ public class GameManager : MonoBehaviour {
     public Transform[] wanderPos;
     public GameObject[] customerObjects;
     public List<GameObject> deptObjects;
-    public StatusTabPanel[] statusTabDepts;
     public StockTabPanel stockTab;
     public Transform cameraPivot;
 
@@ -53,12 +52,8 @@ public class GameManager : MonoBehaviour {
     public DepartmentPanel departmentSelectContents;
     public Button selectHireBtn, selectFireBtn;
 
-    [Header("UI - Canvas")]
-    public Canvas stockCanvas;
-
     [Header("Animators")]
     public Animator selectStatusAnim;
-    public Animator statusAnimator;
     public Animator stockAnimator, pausePanelAnim, gameFaderAnim;
     
     internal static float NetCustomerSpawnTime { get { return instance.customerSpawnTime / Mathf.Max(VisitChance, 0.001f); } }
@@ -67,22 +62,13 @@ public class GameManager : MonoBehaviour {
     internal static float Cash { get; set; }
     internal static int Days { get; private set; }
     internal static int CompanyLevel { get; private set; }
-    internal static float CurrentXP { get; private set; }
     internal static bool isInDemoMode { get { return instance != null ? instance.mainMenuMode : false; } }
-    internal static float NextXP { get {
-            if (_xp.Length > CompanyLevel) return _xp[_xp.Length - 1] + _nxp * (CompanyLevel - _xp.Length);
-            else return _xp[CompanyLevel];
-        }
-    }
 
-    public static event System.Action OnLevelUp, OnNextDay;
+    public static event System.Action OnNextDay, OnGameEnd;
 
     string[] custNames;
     float visitChanceMod = 0;
     static GameManager instance;
-    static float[] _xp;
-    static float _nxp;
-    Text selectedHireText;
     static Dictionary<Departments, DepartmentBase> depts = new Dictionary<Departments, DepartmentBase>();
     List<GameObject> recurringCust = new List<GameObject>();
 
@@ -112,9 +98,7 @@ public class GameManager : MonoBehaviour {
 
         if (!mainMenuMode)
         {
-
-            _xp = baseXPPerLevel;
-            _nxp = nextXPPerLevel;
+            
             CompanyLevel = 1;
 
             EndDayManager.AddExpense(ExpenseType.Maintenance, Departments.Start, maintenanceCost);
@@ -135,7 +119,6 @@ public class GameManager : MonoBehaviour {
 
             DaytimeManager.OnDayEnd += DaytimeManager_OnDayEnd;
             EventManager.RunStartEvent();
-            selectedHireText = selectHireBtn.GetComponentInChildren<Text>();
 
             gameFaderAnim.Play("FadeOut");
         }
@@ -159,41 +142,13 @@ public class GameManager : MonoBehaviour {
         if (!mainMenuMode)
         {
             levelText.text = CompanyLevel.ToString("n0");
-            moneyText.text = string.Format("({1}) ${0:N1}", Cash, CurrentXP);
             timeText.text = string.Format("{0:N0}:{1:00}", DaytimeManager.TimeHour, DaytimeManager.TimeMinute);
-
-            int i = 2;
-            foreach (var status in statusTabDepts)
-            {
-                DepartmentBase db = null;
-                while (db == null)
-                {
-                    if (i <= 10)
-                    {
-                        if (depts.ContainsKey((Departments)i)) db = depts[(Departments)i];
-                        i++;
-                    }
-                    else break;
-                }
-
-                if (db != null)
-                {
-                    status.department = db;
-                    status.departmentName.text = db.departmentName;
-                    status.trustSlider.maxValue = 100;
-                    status.trustSlider.value = db.CurrentTrust;
-                    status.employeeSlider.wholeNumbers = true;
-                    status.employeeSlider.maxValue = db.MaximumStaff;
-                    status.employeeSlider.value = db.CurrentStaff;
-                }
-                else status.gameObject.SetActive(false);
-            }
 
             stockTab.totalStocks.text = string.Format("{0:N0}/{1:N0}", Logistics.GetTotalStocks(), Logistics.GetCapacity());
             stockTab.totalStocksBar.maxValue = Logistics.GetCapacity();
             stockTab.totalStocksBar.value = Logistics.GetTotalStocks();
             stockTab.totalStocksFill.color = Color.HSVToRGB((1 - (float)Logistics.GetTotalStocks() / Logistics.GetCapacity()) / 3.6f, 1, 1);
-            for (i = 0; i < 5; i++)
+            for (int i = 0; i < 5; i++)
             {
                 if (MarketManager.IsGameAvailable((GameType)i))
                 {
@@ -234,8 +189,6 @@ public class GameManager : MonoBehaviour {
 
                             selected = sel;
                             selected.Select();
-
-                            if (selected is DepartmentBase) departmentSelectContents.overtimeToggle.isOn = (selected as DepartmentBase).Overtime;
                         }
                         else
                         {
@@ -270,17 +223,9 @@ public class GameManager : MonoBehaviour {
                     departmentSelectContents.departmentName.text = selectedDept.departmentName;
                     departmentSelectContents.trustBar.maxValue = 100;
                     departmentSelectContents.trustBar.value = selectedDept.CurrentTrust;
-                    departmentSelectContents.staffs.text = selectedDept.CurrentStaff + "/" + selectedDept.MaximumStaff;
-                    departmentSelectContents.salary.text = string.Format("${0:N0}", selectedDept.salary * selectedDept.CurrentStaff);
                     if (selected is Cashier || selected is CustomerService) departmentSelectContents.workSpeedLbl.text = "Work Speed";
                     else departmentSelectContents.workSpeedValue.text = "Effectiveness";
                     departmentSelectContents.workSpeedValue.text = string.Format("{0:N0}%", selectedDept.WorkSpeed * 100);
-
-                    selectedHireText.text = string.Format("Hire (${0:N0})", selectedDept.StaffHireCost);
-                    if (Cash < selectedDept.StaffHireCost || selectedDept.CurrentStaff >= selectedDept.MaximumStaff) selectHireBtn.interactable = false;
-                    else selectHireBtn.interactable = true;
-                    if (selectedDept.CurrentStaff > 0) selectFireBtn.interactable = true;
-                    else selectFireBtn.interactable = false;
                 }
             }
         }
@@ -306,27 +251,6 @@ public class GameManager : MonoBehaviour {
         }
     }
 
-    public void OnToggleOvertime(bool overtime)
-    {
-        if(selected != null && selected is DepartmentBase)
-        {
-            (selected as DepartmentBase).Overtime = overtime;
-        }
-    }
-
-    public void OnHireSelectedStaff()
-    {
-        DepartmentBase select = selected as DepartmentBase;
-        Cash -= select.StaffHireCost;
-        select.AddStaff();
-    }
-
-    public void OnFireSelectedStaff()
-    {
-        DepartmentBase select = selected as DepartmentBase;
-        select.RemoveStaff();
-    }
-
     public void PauseGame()
     {
         Time.timeScale = 0;
@@ -341,6 +265,8 @@ public class GameManager : MonoBehaviour {
 
     public void ExitGame()
     {
+        instance = null;
+        OnGameEnd?.Invoke();
         LoadingScreenManager.nextSceneName = "Menu";
         StartCoroutine(WaitExitAnim());
     }
@@ -380,20 +306,11 @@ public class GameManager : MonoBehaviour {
         
     }
 
-    public void OpenStatusPanel()
-    {
-        var state = statusAnimator.GetCurrentAnimatorStateInfo(0);
-        if (state.IsName("Closed") || state.IsName("Close")) statusAnimator.Play("Open");
-        else statusAnimator.Play("Close");
-        stockCanvas.sortingOrder = -1;
-    }
-
     public void OpenStockPanel()
     {
         var state = stockAnimator.GetCurrentAnimatorStateInfo(0);
         if (state.IsName("Closed") || state.IsName("Close")) stockAnimator.Play("Open");
         else stockAnimator.Play("Close");
-        stockCanvas.sortingOrder = 1;
     }
 
     private void DaytimeManager_OnDayEnd()
@@ -408,9 +325,7 @@ public class GameManager : MonoBehaviour {
         if (Days > 0)
         {
             yield return new WaitWhile(() => { return custCount > 0; });
-            stockCanvas.sortingOrder = -1;
             if (selected != null) DeselectAll();
-            statusAnimator.Play("Closed");
             stockAnimator.Play("Closed");
 
             gameFaderAnim.Play("FadeIn");
@@ -420,8 +335,6 @@ public class GameManager : MonoBehaviour {
         }
         else
         {
-            stockCanvas.sortingOrder = -1;
-            statusAnimator.Play("Closed");
             stockAnimator.Play("Closed");
             EndDayManager.ShowEndDayPanel();
         }
@@ -439,79 +352,60 @@ public class GameManager : MonoBehaviour {
         return selectStatusAnim.GetCurrentAnimatorStateInfo(0).IsName("Closed") || selectStatusAnim.GetCurrentAnimatorStateInfo(0).IsName("Close");
     }
 
-    public static void AddXP(float amount)
+    int bankruptDay = 0;
+    bool bankrupt = false;
+
+    public static void OnMainMenu()
     {
-        CurrentXP += amount;
-        if (CurrentXP >= NextXP)
+        instance.ExitGame();
+    }
+
+    public static void CheckConditions()
+    {
+        if (Cash < 0)
         {
-            CompanyLevel++;
-            OnLevelUp?.Invoke();
+            instance.bankruptDay++;
+            if (instance.bankruptDay > 1)
+            {
+                if (instance.bankrupt)
+                {
+                    //Game Over: It's no longer savable
+                    EndGame();
+                }
+                else
+                {
+                    //It can still be saved
+                    EventManager.RunEvent(EventRunMode.Bankruptcy);
+                    instance.bankrupt = true;
+                }
+                
+            }
         }
+        else instance.bankruptDay = 0;
+    }
+
+    public static void SaveBusiness()
+    {
+        GameManager.Cash = 0;
+        foreach(var dept in GetAllDeptScripts())
+        {
+            dept.AdjustTrust(dept.CurrentTrust / -2);
+        }
+    }
+
+    /// <summary>
+    /// Ends the game abruptly. Counts as a defeat by default, but the game can be abruptly ended with a victory as well
+    /// </summary>
+    /// <param name="victory">True ends the game with a victory, defeat otherwise. Defaults to false</param>
+    public static void EndGame(bool victory=false)
+    {
+        EventManager.RunEvent(EventRunMode.Defeat);
     }
 
     public static void SetVisitChanceMod(float mod, bool adjust = false)
     {
         if (adjust) instance.visitChanceMod += mod;
         else instance.visitChanceMod = mod;
-    }
-
-    public static void BuyItem(ShopEntry entry)
-    {
-        entry.gameObject.SetActive(false);
-        Cash -= entry.itemPrice;
-
-        //switch-case Item ID
-        switch (entry.itemId)
-        {
-            case 0:
-            case 3:
-            case 6:
-                {
-                    instance.deptObjects.Find(x => x.GetComponent<Cashier>() != null).GetComponent<Cashier>().OnUpgrade();
-                    break;
-                }
-            case 1:
-                {
-                    //Customer Service
-                    instance.deptObjects.Find(x => x.GetComponent<CustomerService>() != null).SetActive(true);
-                    break;
-                }
-            case 2:
-                {
-                    //RnD
-                    instance.deptObjects.Find(x => x.GetComponent<ResearchDevelopment>() != null).SetActive(true);
-                    break;
-                }
-            case 4:
-                {
-                    //Marketing
-                    instance.deptObjects.Find(x => x.GetComponent<Marketing>() != null).SetActive(true);
-                    break;
-                }
-            case 5:
-                {
-                    //Finance
-                    instance.deptObjects.Find(x => x.GetComponent<Finance>() != null).SetActive(true);
-                    break;
-                }
-            case 7:
-                {
-                    //HRD
-                    instance.deptObjects.Find(x => x.GetComponent<HumanResource>() != null).SetActive(true);
-                    break;
-                }
-            case 8:
-                {
-                    //Forecaster
-                    instance.deptObjects.Find(x => x.GetComponent<Forecaster>() != null).SetActive(true);
-                    break;
-                }
-            case 9:
-                {
-                    //Saving Grace
-                    break;
-                }
-        }
     }
 
     public static void RegisterDepartment(Departments dept, DepartmentBase deptScript)
@@ -619,16 +513,6 @@ public class GameManager : MonoBehaviour {
         return deptsList;
     }
 
-    public static int GetTotalStaffs()
-    {
-        int staff = 0;
-        foreach(var dept in depts)
-        {
-            staff += dept.Value.CurrentStaff;
-        }
-        return staff;
-    }
-
     public static float CommitTransaction(Customer cust, GameType game)
     {
         if (!instance.mainMenuMode)
@@ -639,7 +523,6 @@ public class GameManager : MonoBehaviour {
                 cust.CommitTransaction(true);
                 float revenue = MarketManager.GetSalePrice(game);
                 Cash += revenue;
-                CurrentXP += revenue * 2;
                 EndDayManager.AddRevenue(game, revenue);
                 Logistics.ExpendGame(game);
                 return revenue;

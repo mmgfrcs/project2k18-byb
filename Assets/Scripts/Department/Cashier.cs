@@ -10,8 +10,6 @@ public class Cashier : DepartmentBase {
     private float[] happinessGainUpgrade = new float[] { 7, 8, 9, 10 };
     [SerializeField]
     private List<Transform> interactablePosUpgrade;
-    [SerializeField]
-    private int[] maxStaffUpgrade = new int[] { 2, 4, 7, 10 };
 
     public float BaseServeSpeed { get { return baseServeSpeedUpgrade[UpgradeLevel - 1]; } }
     public float ServeSpeed { get { return BaseServeSpeed / WorkSpeed; } }
@@ -20,13 +18,7 @@ public class Cashier : DepartmentBase {
     {
         base.Start();
         departmentName = "Cashier";
-        UpdateSalary();
         GameManager.RegisterDepartment(Departments.Cashier, this);
-    }
-
-    internal void UpdateSalary()
-    {
-        UpdateSalary(Departments.Cashier);
     }
 
     public override void OnUpgrade()
@@ -34,7 +26,6 @@ public class Cashier : DepartmentBase {
         base.OnUpgrade();
         interactablePosition.Add(interactablePosUpgrade[0]);
         interactablePosUpgrade.RemoveAt(0);
-        MaximumStaff = maxStaffUpgrade[UpgradeLevel - 1];
     }
     // Update is called once per frame
 

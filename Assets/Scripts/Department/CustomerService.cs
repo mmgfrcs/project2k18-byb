@@ -12,12 +12,6 @@ public class CustomerService : DepartmentBase {
         base.Start();
         trustDrainRate = 0.01f;
         departmentName = "Customer Service";
-        UpdateSalary();
         GameManager.RegisterDepartment(Departments.CustService, this);
-    }
-
-    internal void UpdateSalary()
-    {
-        UpdateSalary(Departments.CustService);
     }
 }
