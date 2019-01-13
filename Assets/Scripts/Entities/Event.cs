@@ -18,6 +18,7 @@ namespace GameEventSystems
         [Range(0, 1)]
         public float chance;
         public bool rollable = true;
+        public bool everlasting = false;
 
         [Header("Guaranteed Event")]
         public bool guaranteed;

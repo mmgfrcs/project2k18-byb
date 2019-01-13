@@ -20,6 +20,10 @@ public class EndDayManager : MonoBehaviour {
     public Text titleText, moneyText, nextDayButtonText;
     public Toggle[] categoryButtons;
     public Animator faderAnimator;
+    public Text objectiveText;
+
+    [Header("UI - Overview")]
+    public GameObject overviewSection;
 
     [Header("UI - Finance")]
     public GameObject financeSection, netRevenue, expenseByDept;
@@ -67,8 +71,8 @@ public class EndDayManager : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-        if (instance == null) instance = this;
-        else Destroy(this);
+        instance = this;
+
         GameManager.OnGameEnd += GameManager_OnGameEnd;
         endDayPanel.SetActive(false);
 	}
@@ -301,7 +305,7 @@ public class EndDayManager : MonoBehaviour {
     {
         for(int i = 0; i < expenses.Count; i++)
         {
-            GameManager.Cash -= expenses[i].amount + expenses[i].amountMod;
+            GameManager.AdjustCash(-(expenses[i].amount + expenses[i].amountMod));
             
         }
 
@@ -323,6 +327,7 @@ public class EndDayManager : MonoBehaviour {
          * Pages:
          * 0 Revenue Report
          * 1 Expense Report
+         * 2 Overview
          * 3 Restock
          * 5 Prices
          * 6 Loan
@@ -331,6 +336,8 @@ public class EndDayManager : MonoBehaviour {
          */
         instance.moneyText.text = GameManager.Cash > 0 ? string.Format("${0:N0}", GameManager.Cash) : string.Format("<color=red>-${0:N0}</color>", Mathf.Abs(GameManager.Cash));
         //Hide all sections
+
+        overviewSection.SetActive(false);
         financeSection.SetActive(false);
         restockSection.SetActive(false);
         pricesSection.SetActive(false);
@@ -349,6 +356,11 @@ public class EndDayManager : MonoBehaviour {
                 {
                     financeSection.SetActive(true);
                     InitializeExpense();
+                    break;
+                }
+            case 2:
+                {
+                    overviewSection.SetActive(true);
                     break;
                 }
             case 3:
@@ -443,11 +455,10 @@ public class EndDayManager : MonoBehaviour {
                 totalCash += addedStocks[i] * MarketManager.GetBuyPrice(i);
                 restocksOrig[i] += addedStocks[i];
                 Logistics.RestockGame((GameType)i, addedStocks[i]);
-
             }
         }
 
-        GameManager.Cash -= totalCash;
+        GameManager.AdjustCash(totalCash);
         addedStocks = new int[5];
 
         PopulateInitialRestock();
@@ -479,7 +490,7 @@ public class EndDayManager : MonoBehaviour {
     public void OnLoanCommit()
     {
         LoanData data = MarketManager.GetLoanData(toloan);
-        GameManager.Cash += data.amount;
+        GameManager.AdjustCash(data.amount);
         loanButton.interactable = false;
         MarketManager.TakeLoan(toloan);
         //Add expense
@@ -557,8 +568,8 @@ public class EndDayManager : MonoBehaviour {
         if (GameManager.IsDepartmentFunctional(Departments.Finance)) categoryButtons[6].interactable = true;
         else categoryButtons[6].interactable = false;
         //Marketing
-        if (GameManager.IsDepartmentFunctional(Departments.Marketing)) instance.categoryButtons[7].interactable = true;
-        else categoryButtons[7].interactable = false;
+        //if (GameManager.IsDepartmentFunctional(Departments.Marketing)) instance.categoryButtons[7].interactable = true;
+        /*else*/ categoryButtons[7].interactable = false;
     }
 
     public static void ShowEndDayPanel()
@@ -577,21 +588,24 @@ public class EndDayManager : MonoBehaviour {
         instance.addedStocks = new int[5];
         instance.endDayPanel.SetActive(true);
         instance.categoryButtons[3].interactable = true;
-        instance.categoryButtons[0].isOn = true;
+        instance.categoryButtons[2].isOn = true;
         instance.CheckDepartment();
-        instance.ChangePage(0);
+        instance.ChangePage(2);
 
         instance.nextDayButtonText.text = "Next Day";
         //instance.PopulateForecast();
         instance.PopulateLoans();
         instance.PopulateInitialRestock(); //Restock
+
+
+        if (GameManager.GameLevel == 1) instance.objectiveText.text = $"- Earn ${2500.ToString("n0")} in 30 days (${Mathf.Max(GameManager.instance.NetIncome, 0).ToString("n0")})";
         
     }
 
     public static void ShowStartDayPanel()
     {
-        EventManager.RunEvent();
         ShowEndDayPanel();
+        EventManager.RunEvent();
         instance.nextDayButtonText.text = "Start Day";
         instance.categoryButtons[3].interactable = false;
         instance.titleText.text = string.Format(instance.dayStartTitle, GameManager.Days);

@@ -545,14 +545,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   mainMenuMode: 1
   customerNameFile: custnames
+  level: 0
   startingMoney: 0
   customerSpawnTime: 2.25
   baseVisitChance: 1
   maintenanceCost: 0
   newCustomerRatio: 2
-  baseXPPerLevel:
-  - 1000
-  nextXPPerLevel: 1000
   startPos:
   - {fileID: 1831171688}
   - {fileID: 1831171687}
@@ -565,7 +563,6 @@ MonoBehaviour:
   customerObjects:
   - {fileID: 1236922695574236, guid: 7ac11cd99dd23f24d94d577d85f9b8cb, type: 2}
   deptObjects: []
-  statusTabDepts: []
   stockTab: {fileID: 0}
   cameraPivot: {fileID: 0}
   panSensitivity: 1
@@ -581,9 +578,7 @@ MonoBehaviour:
   departmentSelectContents: {fileID: 0}
   selectHireBtn: {fileID: 0}
   selectFireBtn: {fileID: 0}
-  stockCanvas: {fileID: 0}
   selectStatusAnim: {fileID: 0}
-  statusAnimator: {fileID: 0}
   stockAnimator: {fileID: 0}
   pausePanelAnim: {fileID: 0}
   gameFaderAnim: {fileID: 0}

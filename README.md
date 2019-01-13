@@ -3,6 +3,8 @@ Nowadays people tend to find some difficulties surrounding their businesses. One
 
 Using our game “Build Your Business” we hope that people can hone their business management skills by letting them experience the thrill of running their own company and learn how to deal with every hardships including keeping customers satisfaction.
 
+## About
+
 Build Your Business is an Android strategy/economy management simulation game that focus on player’s management skill to improve and keep their business alive. Players will need to manage their company by upgrading and managing available resources to tackle the challenges given. Each challenges will determine which actions that are restricted to players and also which resources are available to them. Completing these levels & challenges will give rewards and unlock the next set of levels for the players.
 
 ![Gameplay](MenuGIF.gif)

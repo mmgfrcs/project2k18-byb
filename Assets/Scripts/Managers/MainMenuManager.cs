@@ -13,7 +13,7 @@ public class MainMenuManager : MonoBehaviour {
     
     public void OnPlay()
     {
-        LoadingScreenManager.nextSceneName = "Game";
+        LoadingScreenManager.nextSceneName = "GameL1";
         StartCoroutine(WaitPlayAnim());
     }
 

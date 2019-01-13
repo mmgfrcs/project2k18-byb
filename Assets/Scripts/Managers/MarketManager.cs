@@ -35,8 +35,8 @@ public class MarketManager : MonoBehaviour {
 
     private void Start()
     {
-        if (instance == null) instance = this;
-        else Destroy(this);
+        instance = this;
+        
 
         GameManager.OnGameEnd += GameManager_OnGameEnd;
         

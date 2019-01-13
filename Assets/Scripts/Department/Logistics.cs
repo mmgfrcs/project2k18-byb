@@ -43,6 +43,11 @@ public class Logistics : DepartmentBase {
         }
     }
 
+    public override void OnAbilityUse()
+    {
+        
+    }
+
     public static int GetCapacity()
     {
         return instance.Capacity;

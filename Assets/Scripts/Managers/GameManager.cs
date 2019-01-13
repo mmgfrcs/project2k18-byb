@@ -19,13 +19,12 @@ public class GameManager : MonoBehaviour {
     public string customerNameFile = "custnames";
 
     [Header("Mechanics")]
+    public int level;
     public float startingMoney;
     public float customerSpawnTime = 6f;
     public float baseVisitChance = 0.5f;
     public float maintenanceCost = 100f;
     public float newCustomerRatio = 1;
-    public float[] baseXPPerLevel = { 1000 };
-    public float nextXPPerLevel = 1000;
 
     [Header("Objects")]
     public Transform[] startPos;
@@ -59,16 +58,21 @@ public class GameManager : MonoBehaviour {
     internal static float NetCustomerSpawnTime { get { return instance.customerSpawnTime / Mathf.Max(VisitChance, 0.001f); } }
     internal static float VisitChance { get { return instance.baseVisitChance + instance.visitChanceMod; } }
     internal static float BaseVisitChance { get { return instance.baseVisitChance; } }
-    internal static float Cash { get; set; }
+    internal static float Cash { get; private set; }
     internal static int Days { get; private set; }
-    internal static int CompanyLevel { get; private set; }
+    internal static int GameLevel { get; private set; }
     internal static bool isInDemoMode { get { return instance != null ? instance.mainMenuMode : false; } }
 
     public static event System.Action OnNextDay, OnGameEnd;
 
+    //Statistics
+    public float NetIncome { get; private set; }
+    public float TotalIncome { get; private set; }
+    public float TotalExpenses { get; private set; }
+
     string[] custNames;
     float visitChanceMod = 0;
-    static GameManager instance;
+    public static GameManager instance;
     static Dictionary<Departments, DepartmentBase> depts = new Dictionary<Departments, DepartmentBase>();
     List<GameObject> recurringCust = new List<GameObject>();
 
@@ -80,7 +84,7 @@ public class GameManager : MonoBehaviour {
     float t = 0;
     int cid = 1, custCount = 0, nameCount = 0;
 
-    bool canSpawnCustomer = true, isSpawning;
+    bool canSpawnCustomer = true, isSpawning, exiting;
 
     private void Awake()
     {
@@ -89,17 +93,13 @@ public class GameManager : MonoBehaviour {
 
     // Use this for initialization
     void Start () {
-        if (instance == null || instance.mainMenuMode != mainMenuMode)
-        {
-            instance = this;
-            print("GameManager instance change, Showcase mode is " + (instance.mainMenuMode ? "on" : "off"));
-        }
-        else Destroy(this);
+        instance = this;
+        print("GameManager instance change, Showcase mode is " + (instance.mainMenuMode ? "on" : "off"));
 
         if (!mainMenuMode)
         {
             
-            CompanyLevel = 1;
+            GameLevel = 1;
 
             EndDayManager.AddExpense(ExpenseType.Maintenance, Departments.Start, maintenanceCost);
 
@@ -126,6 +126,7 @@ public class GameManager : MonoBehaviour {
     
     // Update is called once per frame
     void Update () {
+        if (exiting) return;
         if(!depts.ContainsKey(Departments.Logistics) || !depts.ContainsKey(Departments.Cashier) || !depts.ContainsKey(Departments.Showcase))
         {
             Debug.LogError("Cannot load game: Department requirements not met\nRequired Logistics, Cashier and Showcase");
@@ -141,7 +142,6 @@ public class GameManager : MonoBehaviour {
         }
         if (!mainMenuMode)
         {
-            levelText.text = CompanyLevel.ToString("n0");
             timeText.text = string.Format("{0:N0}:{1:00}", DaytimeManager.TimeHour, DaytimeManager.TimeMinute);
 
             stockTab.totalStocks.text = string.Format("{0:N0}/{1:N0}", Logistics.GetTotalStocks(), Logistics.GetCapacity());
@@ -265,9 +265,13 @@ public class GameManager : MonoBehaviour {
 
     public void ExitGame()
     {
+        print("Preparing for exit...");
+        exiting = true;
         instance = null;
         OnGameEnd?.Invoke();
+
         LoadingScreenManager.nextSceneName = "Menu";
+        Time.timeScale = 1;
         StartCoroutine(WaitExitAnim());
     }
 
@@ -342,8 +346,10 @@ public class GameManager : MonoBehaviour {
 
     IEnumerator WaitExitAnim()
     {
+        print("Exit coroutine called");
         gameFaderAnim.Play("FadeIn");
         yield return new WaitForSeconds(1f);
+        print("Exit coroutine complete");
         SceneManager.LoadScene("Loading");
     }
 
@@ -354,6 +360,11 @@ public class GameManager : MonoBehaviour {
 
     int bankruptDay = 0;
     bool bankrupt = false;
+    
+    public static void ActivateSelected()
+    {
+        if (instance.selected != null) (instance.selected as DepartmentBase).OnAbilityUse();
+    }
 
     public static void OnMainMenu()
     {
@@ -382,11 +393,26 @@ public class GameManager : MonoBehaviour {
             }
         }
         else instance.bankruptDay = 0;
+
+        if(instance.level == 1)
+        {
+            if (Days > 30) EndGame();
+            else if (instance.TotalIncome >= 2500) EventManager.RunEvent(EventRunMode.Victory);
+        }
+    }
+
+    public static void AdjustCash(float amount)
+    {
+        Cash += amount;
+        instance.NetIncome += amount;
+        instance.TotalExpenses -= Mathf.Min(amount, 0);
+        instance.TotalIncome += Mathf.Max(amount, 0);
+        print($"Cashflow: {amount}. Net {instance.NetIncome}, Income {instance.TotalIncome}, Expense {instance.TotalExpenses}");
     }
 
     public static void SaveBusiness()
     {
-        GameManager.Cash = 0;
+        Cash = 0;
         foreach(var dept in GetAllDeptScripts())
         {
             dept.AdjustTrust(dept.CurrentTrust / -2);
@@ -522,7 +548,7 @@ public class GameManager : MonoBehaviour {
                 //Success
                 cust.CommitTransaction(true);
                 float revenue = MarketManager.GetSalePrice(game);
-                Cash += revenue;
+                AdjustCash(revenue);
                 EndDayManager.AddRevenue(game, revenue);
                 Logistics.ExpendGame(game);
                 return revenue;

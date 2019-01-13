@@ -11,6 +11,7 @@ public class EventManager : MonoBehaviour {
     public EventPanel panel;
     public BankruptEventPanel bankruptPanel;
     public VictoryDefeatEventPanel victoryDefeatPanel;
+    public UnityEngine.UI.Text objectiveText, objectiveTitle;
 
     [Header("Clear Event")]
     public string clearEventTitle;
@@ -31,8 +32,8 @@ public class EventManager : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-        if (instance == null) instance = this;
-        else Destroy(this);
+        instance = this;
+        
         events = new List<GameEventSystems.Event>();
         foreach(GameEventSystems.Event e in GetComponents<GameEventSystems.Event>())
         {
@@ -55,6 +56,8 @@ public class EventManager : MonoBehaviour {
 
     internal static void RunStartEvent()
     {
+        instance.objectiveTitle.text = instance.startEvent.eventName;
+        instance.objectiveText.text = instance.startEvent.eventDescription;
         instance.panel.eventTitle.text = instance.startEvent.eventName;
         instance.panel.eventDesc.text = instance.startEvent.eventDescription;
         instance.startEvent.Run();
@@ -65,14 +68,17 @@ public class EventManager : MonoBehaviour {
     {
         if (runMode == EventRunMode.Random)
         {
+            print("EventManager: Requested Random Event");
             if (instance.eventToRun == null && !instance.clearEvent)
             {
+                print("Rolling event...");
                 RollEvent();
                 RunEvent();
             }
             else if (instance.clearEvent)
             {
                 //Nothing happening
+                print("Event run: Clear");
                 instance.panel.eventTitle.text = instance.clearEventTitle;
                 instance.panel.eventDesc.text = instance.clearEventDescription;
                 instance.panel.gameObject.SetActive(true);
@@ -80,14 +86,17 @@ public class EventManager : MonoBehaviour {
             else if (instance.eventToRun != null)
             {
                 //Run that event
+                print("Event run: " + instance.eventToRun.eventName);
                 instance.panel.eventTitle.text = instance.eventToRun.eventName;
                 instance.panel.eventDesc.text = instance.eventToRun.eventDescription;
                 instance.eventToRun.Run();
                 instance.panel.gameObject.SetActive(true);
             }
+            else Debug.LogWarning("EventManager report bug - Clear:" + instance.clearEvent);
         }
         else
         {
+            print("EventManager: Requested not Random Event");
             EndEvent();
             if (runMode == EventRunMode.Bankruptcy)
             {
@@ -141,10 +150,10 @@ public class EventManager : MonoBehaviour {
     internal static void EndEvent()
     {
         //Revert event changes
-        if (instance.eventToRun != null)
+        if (instance.eventToRun != null && !instance.eventToRun.everlasting)
         {
             instance.eventToRun.EndRun();
-            if (instance.eventToRun.toEnd) instance.eventToRun = null;
+            /*if (instance.eventToRun.toEnd)*/ instance.eventToRun = null;
         }
     }
 
@@ -164,6 +173,7 @@ public class EventManager : MonoBehaviour {
 
         foreach (var ev in instance.events)
         {
+            print("EventManager: Rolling " + ev.eventName + ", Rollable:" + ev.rollable);
             if (!ev.rollable) continue;
             if (MathRand.WeightedPick(new float[] { ev.chance, 1 - ev.chance }) == 0)
             {

@@ -6,6 +6,7 @@ public abstract class DepartmentBase : MonoBehaviour, ISelectable {
     
     public List<Transform> interactablePosition;
     public Transform lookDirection;
+    public AbilityStruct ability;
     
     protected float trustDrainRate = 0f;
     
@@ -22,6 +23,11 @@ public abstract class DepartmentBase : MonoBehaviour, ISelectable {
         }
     }
     public virtual bool IsFunctional { get { return WorkSpeed > 0; } }
+
+    public virtual void OnAbilityUse()
+    {
+
+    }
 
     public virtual void OnUpgrade()
     {
@@ -52,4 +58,13 @@ public abstract class DepartmentBase : MonoBehaviour, ISelectable {
     {
         CurrentTrust = Mathf.Clamp(CurrentTrust + mod, 0, 100);
     }
+}
+
+[System.Serializable]
+public struct AbilityStruct
+{
+    public string name;
+    public string cost;
+    public float[] effects;
+    public float[] upgradeCost;
 }
