@@ -1,0 +1,174 @@
+fileFormatVersion: 2
+guid: 917c971d7a7af184f81b62fa5051502b
+ModelImporter:
+  serializedVersion: 22
+  fileIDToRecycleName:
+    100000: Body001
+    100002: Bone_Body001
+    100004: Bone_Butt001
+    100006: Bone_Head001
+    100008: Bone_L_Arm003
+    100010: Bone_L_Arm004
+    100012: Bone_L_Foot001
+    100014: Bone_L_Hand001
+    100016: Bone_R_Arm003
+    100018: Bone_R_Arm004
+    100020: Bone_R_Foot001
+    100022: Bone_R_Hand001
+    100024: //RootNode
+    100026: Ctrl_Root001
+    100028: idunglp001
+    100030: KAKI_LP001
+    100032: KEPALAUVW_LP001
+    100034: RAMBUT_LP001
+    400000: Body001
+    400002: Bone_Body001
+    400004: Bone_Butt001
+    400006: Bone_Head001
+    400008: Bone_L_Arm003
+    400010: Bone_L_Arm004
+    400012: Bone_L_Foot001
+    400014: Bone_L_Hand001
+    400016: Bone_R_Arm003
+    400018: Bone_R_Arm004
+    400020: Bone_R_Foot001
+    400022: Bone_R_Hand001
+    400024: //RootNode
+    400026: Ctrl_Root001
+    400028: idunglp001
+    400030: KAKI_LP001
+    400032: KEPALAUVW_LP001
+    400034: RAMBUT_LP001
+    2100000: 'Material #6'
+    2100002: 'Material #4'
+    2100004: 'Material #1'
+    2100006: 'Material #5'
+    2100008: 'Material #7'
+    2300000: idunglp001
+    2300002: RAMBUT_LP001
+    3300000: idunglp001
+    3300002: RAMBUT_LP001
+    4300000: RAMBUT_LP001
+    4300002: idunglp001
+    4300004: Body001
+    4300006: KEPALAUVW_LP001
+    4300008: KAKI_LP001
+    7400000: HandGesture
+    9500000: //RootNode
+    13700000: Body001
+    13700002: KAKI_LP001
+    13700004: KEPALAUVW_LP001
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: 'Material #1'
+    second: {fileID: 2100000, guid: 07d3befd79175224791f2f2d4c0adf49, type: 2}
+  materials:
+    importMaterials: 1
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    motionNodeName: 
+    rigImportErrors: 
+    rigImportWarnings: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations:
+    - serializedVersion: 16
+      name: HandGesture
+      takeName: Take 001
+      firstFrame: 1
+      lastFrame: 110
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
+      loopBlend: 0
+      loopBlendOrientation: 0
+      loopBlendPositionY: 0
+      loopBlendPositionXZ: 0
+      keepOriginalOrientation: 0
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 0
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    isReadable: 1
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    importVisibility: 1
+    importBlendShapes: 1
+    importCameras: 1
+    importLights: 1
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    optimizeMeshForGPU: 1
+    keepQuads: 0
+    weldVertices: 1
+    preserveHierarchy: 0
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+    normalCalculationMode: 4
+  importAnimation: 1
+  copyAvatar: 0
+  humanDescription:
+    serializedVersion: 2
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    rootMotionBoneName: 
+    rootMotionBoneRotation: {x: 0, y: 0, z: 0, w: 1}
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  animationType: 2
+  humanoidOversampling: 1
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

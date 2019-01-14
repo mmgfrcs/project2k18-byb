@@ -21,14 +21,21 @@ public class DaytimeManager : MonoBehaviour {
     System.DateTime time;
 	// Use this for initialization
 	void Start () {
-        if (instance == null) instance = this;
-        else Destroy(this);
+        instance = this;
+
         time = new System.DateTime(2017, 12, 31, startHour, 0, 0, System.DateTimeKind.Utc);
         lightTransform.rotation = Quaternion.Euler((startHour - 6) * 15f, lightTransform.rotation.y, lightTransform.rotation.z);
+        GameManager.OnGameEnd += GameManager_OnGameEnd;
 	}
-	
-	// Update is called once per frame
-	void Update () {
+
+    private void GameManager_OnGameEnd()
+    {
+        instance = null;
+        GameManager.OnGameEnd -= GameManager_OnGameEnd;
+    }
+
+    // Update is called once per frame
+    void Update () {
         if (!paused)
         {
             time = time.AddSeconds(Time.deltaTime * timeSpeed);

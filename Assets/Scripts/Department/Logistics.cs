@@ -28,7 +28,6 @@ public class Logistics : DepartmentBase {
 
         trustDrainRate = 0.1f;
         departmentName = "Logistics";
-        overtimeEffect = "Increase obtained bought supplies";
         GameManager.RegisterDepartment(Departments.Logistics, this);
         Capacity = startingCapacity;
 
@@ -42,27 +41,11 @@ public class Logistics : DepartmentBase {
             ExpendGame(3);
             ExpendGame(4);
         }
-        UpdateSalary();
     }
 
-    protected override void OnOvertime()
+    public override void OnAbilityUse()
     {
-        if (Overtime)
-        {
-            for(int i = 0; i < currentStocks.Length; i++)
-            {
-                RestockGame(i, Mathf.RoundToInt(Random.Range(0f, addedStocks[i] / 2f)));
-            }
-            CurrentTrust -= (10 + CurrentTrust * 0.05f);
-            Overtime = false;
-        }
-        addedStocks = new int[5];
-
-    }
-
-    internal void UpdateSalary()
-    {
-        UpdateSalary(Departments.Logistics);
+        
     }
 
     public static int GetCapacity()

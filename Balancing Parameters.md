@@ -174,52 +174,10 @@ The base turn speed of the Customer. Affects how fast Customers turn around. Thi
 Increasing Speed and Angular speed will make the game *seem* faster.
 
 ## Departments
-### Starting/Max Staffs
-
-Found In | Type | Default
---- | --- | ---
-Building > Props > (any) | Integer | 1 and 1 respectively
-
-Modify the department's starting amount of staffs and maximum amount of staffs that can work on a single department at a time. Staffs affect the department'swork speed.
-
-### Salary
-
-Found In | Type | Default
---- | --- | ---
-Building > Props > (any) | Float | 0
-
-Modify the staff's pay per day, per staff for the department.
-
-### Minimum Staff Ratio
-
-Found In | Type | Default
---- | --- | ---
-Building > Props > (any) | Float | 0.2
-
-Modify the ratio of number of staffs required for the department to function. This number is multiplied by Maximum Staff to figure out Minimum Operating Staff. If the current number of staffs is below Minimum Operating Staff, the department will cease to function.
-
-The only department which ignores this value is Logistics (not yet implemented).
-
-### Full Speed Staff Ratio
-
-Found In | Type | Default
---- | --- | ---
-Building > Props > (any) | Float | 0.8
-
-Modify the ratio of number of staffs required for the department to work at 100% speed/efficiency. This number is multiplied by Maximum Staff to figure out Minimum Full Speed Staff. If the current number of staffs is below Minimum Operating Staff, the department will work at a reduced speed/efficiency, affecting these departments:
-- Cashier/Customer Service: determines serve speed
-- Logistics: determines buy prices
-- Marketing: determines Ad effectiveness
-- Finance: determines Loan interest
-- HRD: determines train speed and Incentive effectiveness
-- Forecaster: determines forecast accuracy
-- R&D: determines cost of research and duration of discovery
 
 **There are department-specific variables that can be changed but their documentation is unavailable. Please only change these value if you know what you're doing!**
 - **Starting Capacity @ Building > Props > LGC**
 - **Starting Stocks @ Building > Props > LGC**
-- **Expense Ratios @ Building > Props > Finance**
-- **Initial Uncertainty @ Building > Props > Forc**
 
 
 ## Additional

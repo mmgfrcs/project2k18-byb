@@ -8,8 +8,13 @@ public class ElectricityOveruseEvent : GameEventSystems.Event {
     {
         Debug.Log("Run ElectricityOveruse");
         float cost = Random.Range(10, 50) * 10;
-        GameManager.Cash -= cost;
+        GameManager.AdjustCash(cost);
         List<DepartmentBase> deptList = GameManager.GetAllDeptScripts();
         foreach (var dept in deptList) dept.AdjustTrust(-10);
+    }
+
+    public override void EndRun()
+    {
+        toEnd = true;
     }
 }

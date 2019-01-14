@@ -8,7 +8,7 @@ namespace GameEventSystems
     {
         Any, All
     }
-    public class Event : MonoBehaviour
+    public abstract class Event : MonoBehaviour
     {
         public int eventId;
         public string eventName;
@@ -17,6 +17,8 @@ namespace GameEventSystems
         public int goodWeight;
         [Range(0, 1)]
         public float chance;
+        public bool rollable = true;
+        public bool everlasting = false;
 
         [Header("Guaranteed Event")]
         public bool guaranteed;
@@ -28,15 +30,12 @@ namespace GameEventSystems
 
         internal bool toEnd;
 
-        public virtual void Run()
-        {
+        /// <summary>
+        /// Runs this event
+        /// </summary>
+        public abstract void Run();
 
-        }
-
-        public virtual void EndRun()
-        {
-            toEnd = true;
-        }
+        public abstract void EndRun();
 
         // Use this for initialization
         protected virtual void Start()

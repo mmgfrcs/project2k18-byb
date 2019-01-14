@@ -4,20 +4,28 @@ using UnityEngine;
 
 public class Cashier : DepartmentBase {
 
-    public float BaseServeSpeed { get; internal set; } = 4;
+    [Header("Upgrades"), SerializeField]
+    private float[] baseServeSpeedUpgrade = new float[] { 4, 3.6f, 3.3f, 3f };
+    [SerializeField]
+    private float[] happinessGainUpgrade = new float[] { 7, 8, 9, 10 };
+    [SerializeField]
+    private List<Transform> interactablePosUpgrade;
+
+    public float BaseServeSpeed { get { return baseServeSpeedUpgrade[UpgradeLevel - 1]; } }
     public float ServeSpeed { get { return BaseServeSpeed / WorkSpeed; } }
 
     protected override void Start()
     {
         base.Start();
         departmentName = "Cashier";
-        UpdateSalary();
         GameManager.RegisterDepartment(Departments.Cashier, this);
     }
 
-    internal void UpdateSalary()
+    public override void OnUpgrade()
     {
-        UpdateSalary(Departments.Cashier);
+        base.OnUpgrade();
+        interactablePosition.Add(interactablePosUpgrade[0]);
+        interactablePosUpgrade.RemoveAt(0);
     }
     // Update is called once per frame
 
